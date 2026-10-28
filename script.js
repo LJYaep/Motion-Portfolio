@@ -18,6 +18,29 @@ const SITE_CONFIG = Object.freeze({
   const $ = (selector, parent = document) => parent.querySelector(selector);
   const $$ = (selector, parent = document) => Array.from(parent.querySelectorAll(selector));
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let motionEnabled = false;
+  const motionAnimations = new Set();
+  const elementMotions = new WeakMap();
+  function animateElement(element, frames, options = {}) {
+    if (!motionEnabled || !element?.animate) return;
+    elementMotions.get(element)?.cancel();
+    const animation = element.animate(frames, { duration: 550, easing: "cubic-bezier(.22,1,.36,1)", ...options });
+    motionAnimations.add(animation);
+    elementMotions.set(element, animation);
+    const release = () => motionAnimations.delete(animation);
+    animation.addEventListener("finish", release, { once: true });
+    animation.addEventListener("cancel", release, { once: true });
+    return animation;
+  }
+  function animateProjectLayout(before) {
+    projectCards.filter(card => !card.hidden).forEach((card, index) => {
+      const rect = card.getBoundingClientRect();
+      const previous = before.get(card);
+      const x = previous ? previous.left - rect.left : 0;
+      const y = previous ? previous.top - rect.top : 22;
+      animateElement(card, [{ opacity: previous ? 1 : 0, transform: `translate(${x}px, ${y}px)` }, { opacity: 1, transform: "translate(0, 0)" }], { duration: 480, delay: Math.min(index * 35, 175) });
+    });
+  }
 
   // Browser-level deterrents, not access control. Do not interfere with visitors'
   // own form text or put overlays over the third-party YouTube player.
@@ -148,6 +171,10 @@ const SITE_CONFIG = Object.freeze({
     const open = menu.getAttribute("aria-expanded") !== "true";
     menu.setAttribute("aria-expanded", String(open));
     nav.classList.toggle("is-open", open);
+    if (open) {
+      animateElement(nav, [{ opacity: 0, transform: "translateY(-10px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 280 });
+      $$("a", nav).forEach((link, index) => animateElement(link, [{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "translateY(0)" }], { delay: index * 40, duration: 320 }));
+    }
   });
   document.addEventListener("keydown", event => {
     if (event.key === "Escape" && menu?.getAttribute("aria-expanded") === "true") {
@@ -184,6 +211,8 @@ const SITE_CONFIG = Object.freeze({
   const filters = $$("[data-filter]");
   const projectCards = $$(".project-card");
   filters.forEach(button => button.addEventListener("click", () => {
+    motionAnimations.forEach(animation => animation.cancel());
+    const before = new Map(projectCards.filter(card => !card.hidden).map(card => [card, card.getBoundingClientRect()]));
     filters.forEach(filter => {
       const selected = filter === button;
       filter.classList.toggle("active", selected);
@@ -199,6 +228,7 @@ const SITE_CONFIG = Object.freeze({
     $$("[data-project-group]").forEach(group => {
       group.hidden = ! $$(".project-card", group).some(card => !card.hidden);
     });
+    animateProjectLayout(before);
   }));
 
   // Cards remain normal YouTube links without JavaScript. When available,
@@ -218,6 +248,7 @@ const SITE_CONFIG = Object.freeze({
     player.setAttribute("id", "project-player");
     $("#dialog-art").replaceChildren(player);
     dialog.showModal();
+    animateElement(dialog, [{ opacity: 0, transform: "translateY(16px) scale(.98)" }, { opacity: 1, transform: "translateY(0) scale(1)" }], { duration: 320 });
     monitorPlayer(player, $("#dialog-feedback"));
     document.body.classList.add("modal-open");
   }));
@@ -412,5 +443,72 @@ const SITE_CONFIG = Object.freeze({
       link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
+  }
+  // Progressive enhancement: all content and navigation work without motion.
+  // No scroll interception, autoplay media, or hidden-until-JS content.
+  if (window.addEventListener && document.documentElement) {
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const heroOrbit = $(".hero-orbit");
+    let savedMotion = "";
+    try { savedMotion = window.localStorage.getItem("ljy-motion") || ""; } catch { /* Storage can be unavailable. */ }
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "motion-toggle";
+    toggle.setAttribute("aria-label", "Enable website animations");
+    $(".site-header")?.appendChild(toggle);
+    const progress = document.createElement("div");
+    progress.className = "reading-progress";
+    progress.setAttribute("aria-hidden", "true");
+    document.body.appendChild(progress);
+    function applyMotion() {
+      motionEnabled = !preference.matches && savedMotion !== "off";
+      document.body.classList.toggle("motion-enabled", motionEnabled);
+      toggle.textContent = preference.matches ? "Motion reduced" : motionEnabled ? "Motion on" : "Motion off";
+      toggle.setAttribute("aria-pressed", String(motionEnabled));
+      toggle.disabled = preference.matches;
+      toggle.title = preference.matches ? "Reduced motion is enabled in your device settings" : "Turn website animations on or off";
+      if (!motionEnabled) {
+        motionAnimations.forEach(animation => animation.cancel());
+        if (heroOrbit) heroOrbit.style.transform = "";
+      }
+    }
+    toggle.addEventListener("click", () => {
+      savedMotion = motionEnabled ? "off" : "on";
+      try { window.localStorage.setItem("ljy-motion", savedMotion); } catch { /* Optional preference storage. */ }
+      applyMotion();
+    });
+    preference.addEventListener("change", applyMotion);
+    applyMotion();
+    $$(".hero .eyebrow, .hero h1, .hero-side > p, .hero-side .button-group").forEach((element, index) => {
+      animateElement(element, [{ opacity: 0, transform: "translateY(26px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 850, delay: index * 85 });
+    });
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          observer.unobserve(entry.target);
+          animateElement(entry.target, [{ opacity: 0, transform: "translateY(24px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 650 });
+        });
+      }, { threshold: .08, rootMargin: "0px 0px -24px 0px" });
+      $$(".section-heading, .project-card, .service-row, .process-grid article, .about-intro, .intro-grid > div, .contact-band, .contact-intro, #enquiry-form").forEach(element => observer.observe(element));
+    }
+    let scrollFrame = 0;
+    function updateProgress() {
+      scrollFrame = 0;
+      const distance = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = distance > 0 ? Math.min(1, Math.max(0, window.scrollY / distance)) : 0;
+      progress.style.transform = `scaleX(${ratio})`;
+      if (heroOrbit && motionEnabled) heroOrbit.style.transform = `rotate(-22deg) translate3d(0, ${Math.min(Math.max(window.scrollY, 0) * .06, 28)}px, 0)`;
+    }
+    function scheduleProgress() {
+      if (!scrollFrame) scrollFrame = requestAnimationFrame(updateProgress);
+    }
+    window.addEventListener("scroll", scheduleProgress, { passive: true });
+    window.addEventListener("resize", scheduleProgress, { passive: true });
+    window.addEventListener("pageshow", scheduleProgress);
+    document.addEventListener("visibilitychange", () => {
+      document.body.classList.toggle("motion-paused", document.hidden);
+    });
+    updateProgress();
   }
 })();
