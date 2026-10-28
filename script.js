@@ -274,8 +274,8 @@ const SITE_CONFIG = Object.freeze({
     }));
 
     if (!SITE_CONFIG.enquiryEndpoint) {
-      $("#form-mode").textContent = "Online submission is being set up. Fill in your details to open an email to both recipients, or contact me on Instagram.";
-      submit.textContent = "Prepare email ↗";
+      $("#form-mode").textContent = "Submit through FormSubmit and complete the spam check. A confirmation email follows once the receiving address is activated.";
+      submit.textContent = "Send enquiry ↗";
     }
 
     if (SITE_CONFIG.enquiryEndpoint && ["http:", "https:"].includes(window.location.protocol)) {
@@ -306,6 +306,20 @@ const SITE_CONFIG = Object.freeze({
     });
 
     form.addEventListener("submit", async event => {
+      if (!SITE_CONFIG.enquiryEndpoint && ["http:", "https:"].includes(window.location.protocol)) {
+        // Native POST is required: FormSubmit autoresponses do not support AJAX.
+        // Keep its CAPTCHA enabled and let the provider show the actual result.
+        updatePreference();
+        if (!form.reportValidity() || $("#company-website").value) {
+          event.preventDefault();
+          return;
+        }
+        if (preference.value === "email") handleInput.value = "";
+        status.hidden = false;
+        status.classList.remove("is-error");
+        status.textContent = "Continuing to the secure spam check…";
+        return;
+      }
       event.preventDefault();
       if (busy || submitted || !form.reportValidity()) return;
       const data = {

@@ -1,4 +1,4 @@
-> GitHub Pages: start with [GITHUB-FIX.md](GITHUB-FIX.md) for safe publishing and connecting the email backend.
+> GitHub Pages uses FormSubmit with one-time email activation; see [GITHUB-FIX.md](GITHUB-FIX.md). The Python/SMTP instructions below are an optional alternative backend.
 
 # Activate enquiry email and Discord notifications
 

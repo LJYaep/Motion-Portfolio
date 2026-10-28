@@ -1,64 +1,47 @@
-# Fix the live LJY GitHub Pages deployment
+# GitHub Pages email submission — FormSubmit
 
-These files are prepared changes, not an already deployed fix.
+The live GitHub Pages form now POSTs directly to FormSubmit. It does not open an
+email app and does not need a Python server, SMTP password or API key.
 
-## 1. Remove private runtime files from the public repository
+## One-time owner activation
 
-In your local checkout of denialaep/LJY, copy this package over the website files,
-including .gitignore and .github/workflows/pages.yml. Then run:
+1. Open https://denialaep.github.io/LJY/contact.html and submit a clearly labelled
+   setup test with an email address you control. Complete FormSubmit's CAPTCHA.
+2. Check daniljy.aep@gmail.com, including Spam, for the FormSubmit activation
+   email. Click its activation link. Only the mailbox owner can do this.
+3. Submit a fresh test after activation. Verify delivery to daniljy.aep@gmail.com,
+   the CC at denial.aep@gmail.com, and the confirmation at the submitter's address.
 
-```sh
-git rm -r --cached --ignore-unmatch data __pycache__ server.env .env
-```
+Until activation and that delivery check are complete, email delivery has not
+been verified. Do not treat an activation screen as a submitted real enquiry.
 
-This removes these paths from Git tracking while retaining local copies. Review
-`git diff --cached --stat`, then commit and push the changed files. A .gitignore
-alone does not remove files already tracked. If real enquiry records were
-committed, removing them in a new commit does not erase Git history: clean those
-paths from history following GitHub's sensitive-data removal guide before
-considering the exposure resolved. Do not upload your local data directory.
+## How it works
 
-## 2. Publish only the frontend
+The native HTML form uses FormSubmit with `_cc`, `_subject`, `_autoresponse` and
+`_template`. The visitor's `email` field receives the autoresponse. CAPTCHA stays
+enabled: FormSubmit says autoresponses do not work with AJAX or disabled CAPTCHA.
+FormSubmit displays the actual submission outcome; this site does not show an
+unverified success message. The form discloses the external processor to visitors.
 
-GitHub repository Settings → Pages → Build and deployment → Source: GitHub
-Actions. Run the Deploy portfolio to Pages workflow. It builds `_site` from an
-explicit file allowlist; Python source, settings and databases are excluded.
-Until a backend URL is configured the form prepares an email addressed to both
-owners, clearly states that nothing has been submitted, and does not POST to a
-nonexistent GitHub endpoint. Manual email does not send an automatic receipt.
+Instagram contact and Discord reply preference remain available. Automatic
+Discord pings are not enabled: a private webhook must not be embedded in public
+HTML. The optional private Python backend can still provide that later.
 
-## 3. Host the email backend
+## Optional private backend
 
-Use a Python/Docker host with persistent storage and outbound SMTP support.
-The included Dockerfile listens on port 8080. Attach persistent storage at
-`/data`; configure HTTPS using the host's proxy. Do not use ephemeral storage
-for enquiry records. Host charges and account setup depend on your provider.
+The Python backend and Dockerfile remain available. Configure its private SMTP
+settings and persistent storage using SETUP.md, then set the GitHub Actions
+repository variable ENQUIRY_ENDPOINT to the real HTTPS /api/enquiries URL. The
+Pages workflow injects public-config.js, and JavaScript then uses that API.
+ALLOWED_ORIGINS must include https://denialaep.github.io (without /LJY).
 
-Set private environment values from server.env.example on that host:
+## Repository protection
 
-- SMTP_HOST, SMTP_PORT, SMTP_SSL, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM
-- ALLOWED_ORIGINS=https://denialaep.github.io (no /LJY path)
-- ENQUIRY_DB_PATH=/data/enquiries.sqlite3
-- Optional DISCORD_WEBHOOK_URL, DISCORD_NOTIFY_USER_ID, DISCORD_CONTACT_URL
+Private data and credentials remain excluded from Git tracking and the Pages
+artifact. The database was removed from the current branch, but its older Git
+history was not rewritten. If it contained real enquiry records, remove them
+from Git history using GitHub's sensitive-data guide.
 
-Do not enter passwords or a webhook in GitHub public files. See SETUP.md for
-Gmail app-password instructions. The backend sends to daniljy.aep@gmail.com,
-denial.aep@gmail.com, and sends a confirmation to the submitter.
-
-## 4. Connect the frontend
-
-Repository Settings → Secrets and variables → Actions → Variables → New
-repository variable: `ENQUIRY_ENDPOINT` = your backend's real HTTPS URL ending
-in `/api/enquiries`. This URL is public, not a secret. Re-run the Pages workflow.
-The workflow writes public-config.js automatically. For manual uploads, set the
-same URL in public-config.js yourself. Never invent a backend URL.
-
-Check that GET /api/config at your backend returns emailConfigured: true.
-Submit one real test from https://denialaep.github.io/LJY/contact.html and verify
-both owner inboxes, the visitor receipt and optional Discord notification.
-A submitted reference means durably queued; it does not guarantee inbox arrival.
-No live email has been sent or verified by this update.
-
-Official guides:
-- https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages
+References:
+- https://formsubmit.co/documentation
 - https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository
