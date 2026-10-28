@@ -353,7 +353,7 @@ function validContactEmail(value) {
     currency.addEventListener("change", updatePayment);
     if (hasAgreementDelivery) {
       form.setAttribute("action", agreementEndpoint);
-      $("#processor-note").textContent = "Your details are processed through Dani’s private Google document and email workflow. The draft agreement goes to Dani for review first.";
+      $("#processor-note").textContent = "Your details are processed through a private Google Document and email workflow. The draft agreement will be reviewed first.";
     }
     $("#request-id").value = window.crypto?.randomUUID?.() || `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     if ($$("#service option").some(option => option.value === serviceParam)) $("#service").value = serviceParam;
@@ -428,7 +428,7 @@ function validContactEmail(value) {
     }));
 
     if (!SITE_CONFIG.enquiryEndpoint) {
-      $("#form-mode").textContent = hasAgreementDelivery ? "Your request prepares a draft agreement for Dani’s review. Dani will send you the reviewed agreement separately." : "Your project request goes to Dani for review. The agreement will be sent separately after scope, price and dates are confirmed.";
+      $("#form-mode").textContent = hasAgreementDelivery ? "Your request prepares a draft agreement for review. A reply with the reviewed agreement will be sent to your inbox/dms." : "Your project request goes to Dani for review. The agreement will be sent separately after scope, price and dates are confirmed.";
       submit.textContent = "Send project request ↗";
     }
 
