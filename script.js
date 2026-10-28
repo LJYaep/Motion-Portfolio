@@ -513,6 +513,8 @@ function validContactEmail(value) {
       const irrelevant = $("#service").value === "motion";
       $("#device-target-field").hidden = irrelevant;
       $("#device-target").disabled = irrelevant;
+      if (irrelevant) $("#device-target").removeAttribute("name");
+      else $("#device-target").name = "device_target";
     }
     $("#service").addEventListener("change", updateDeviceRequirements);
     $("#service").addEventListener("change", updatePayment);
