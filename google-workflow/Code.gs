@@ -72,6 +72,7 @@ function validateRequest_(raw) {
   ['start_date','end_date'].forEach(key => {
     if (data[key] && (!/^\d{4}-\d{2}-\d{2}$/.test(data[key]) || new Date(data[key] + 'T00:00:00Z').toISOString().slice(0,10) !== data[key])) throw new Error('Please check the requested dates.');
   });
+  if (data.service === 'motion') data.device_target = '';
   const today = Utilities.formatDate(new Date(), 'Asia/Singapore', 'yyyy-MM-dd');
   if (data.start_date && data.start_date < today) throw new Error('Start date must be today or later (Singapore time).');
   if (data.end_date && data.end_date < today) throw new Error('Finish date must be today or later (Singapore time).');
@@ -90,7 +91,7 @@ function draftFields_(data) {
     CLIENT_NAME: data.name + (data.client_group ? ' / ' + data.client_group : ''),
     CLIENT_CONTACT: data.email + (data.preferred_contact !== 'email' ? '\nPreferred contact: ' + data.preferred_contact + ' — ' + data.contact_handle : ''),
     PROJECT_TYPE: PROJECT_TYPES[data.service],
-    PROJECT_DETAILS: data.message + '\n\nClient proposal for freelancer review\nProposed budget: ' + budget + '\nPayment preference: ' + (data.payment_method === 'robux' ? 'Robux (backup option)' : 'Money (preferred)') + '\nPayment method: ' + (data.payment_channel || 'To be discussed') + '\nDevice requirements: ' + (data.device_target || 'To be discussed') + '\nRequested start: ' + (data.start_date || 'To be discussed') + '\nRequested finish: ' + (data.end_date || 'To be discussed') + '\nReference: ' + data.request_id + '\nScope, dates and price require freelancer approval. Signatures remain blank.',
+    PROJECT_DETAILS: data.message + '\n\nClient proposal for freelancer review\nProposed budget: ' + budget + '\nPayment preference: ' + (data.payment_method === 'robux' ? 'Robux (backup option)' : 'Money (preferred)') + '\nPayment method: ' + (data.payment_channel || 'To be discussed') + (data.service === 'motion' ? '' : '\nDevice requirements: ' + (data.device_target || 'To be discussed')) + '\nRequested start: ' + (data.start_date || 'To be discussed') + '\nRequested finish: ' + (data.end_date || 'To be discussed') + '\nReference: ' + data.request_id + '\nScope, dates and price require freelancer approval. Signatures remain blank.',
     START_DATE: data.start_date ? data.start_date + ' (requested; pending review)' : 'To be agreed',
     END_DATE: data.end_date ? data.end_date + ' (requested; pending review)' : 'To be agreed',
     AGREED_SGD_PRICE: 'To be confirmed by freelancer'

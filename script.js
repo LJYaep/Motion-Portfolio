@@ -509,6 +509,12 @@ function validContactEmail(value) {
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
       $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to Discuss First. Whole numbers only. The Robux minimums below apply; the final price is confirmed after review." : "Enter an amount, or leave blank to Discuss First. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
     }
+    function updateDeviceRequirements() {
+      const irrelevant = $("#service").value === "motion";
+      $("#device-target-field").hidden = irrelevant;
+      $("#device-target").disabled = irrelevant;
+    }
+    $("#service").addEventListener("change", updateDeviceRequirements);
     $("#service").addEventListener("change", updatePayment);
     currency.addEventListener("change", updatePayment);
     if (hasAgreementDelivery) {
@@ -518,6 +524,7 @@ function validContactEmail(value) {
     $("#request-id").value = window.crypto?.randomUUID?.() || `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     if ($$("#service option").some(option => option.value === serviceParam)) $("#service").value = serviceParam;
     updatePayment();
+    updateDeviceRequirements();
     const preference = $("#preferred-contact");
     const handleField = $("#contact-handle-field");
     const handleInput = $("#contact-handle");
@@ -551,7 +558,7 @@ function validContactEmail(value) {
       const lines = ["LJY — Project request (delivery not confirmed)", ""];
       Object.entries(labels).forEach(([name, label]) => {
         const field = form.elements.namedItem(name);
-        if (!field) return;
+        if (!field || field.disabled) return;
         const value = field.tagName === "SELECT" ? field.selectedOptions[0]?.textContent : field.value.trim();
         if (value) lines.push(label + ": " + value);
       });
@@ -644,7 +651,7 @@ function validContactEmail(value) {
       const data = {
         name: $("#name").value.trim(), email: $("#email").value.trim(), service: $("#service").value,
         budget: $("#budget").value.trim() ? `${$("#budget-currency").value} ${$("#budget").value.trim()}` : "", timeline: [$("#start-date").value, $("#end-date").value].filter(Boolean).join(" to "),
-        message: [$("#message").value.trim(), "", `Client group: ${$("#client-group").value.trim() || "Not supplied"}`, `Requested start: ${$("#start-date").value || "To be discussed"}`, `Requested finish: ${$("#end-date").value || "To be discussed"}`, `Payment preference: ${payment.value}`, `Payment method: ${$("#payment-channel").value}`, `Device requirements: ${$("#device-target").value}`, "Request for freelancer review; no price or date is confirmed."].join("\n"), preferred_contact: preference.value,
+        message: [$("#message").value.trim(), "", `Client group: ${$("#client-group").value.trim() || "Not supplied"}`, `Requested start: ${$("#start-date").value || "To be discussed"}`, `Requested finish: ${$("#end-date").value || "To be discussed"}`, `Payment preference: ${payment.value}`, `Payment method: ${$("#payment-channel").value}`, ...($("#device-target").disabled ? [] : [`Device requirements: ${$("#device-target").value}`]), "Request for freelancer review; no price or date is confirmed."].join("\n"), preferred_contact: preference.value,
         contact_handle: preference.value === "email" ? "" : handleInput.value.trim(),
         company_website: $("#company-website").value
       };

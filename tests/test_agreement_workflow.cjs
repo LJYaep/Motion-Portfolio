@@ -48,3 +48,9 @@ assert.equal(ctx.validateRequest_({...valid,payment_method:'',currency:'SGD'}).p
 assert.equal(ctx.validateRequest_({...valid,payment_method:'cash',currency:'ROBUX',budget:'25000'}).payment_method,'robux');
 assert.equal(ctx.validateRequest_({...valid,payment_method:'robux',currency:'USD'}).payment_method,'cash');
 console.log('PASS: currency determines payment type without a separate payment selector.');
+
+const motionRequest=ctx.validateRequest_({...valid,service:'motion',device_target:'mobile'});
+assert.equal(motionRequest.device_target,'');
+assert(!ctx.draftFields_(motionRequest).PROJECT_DETAILS.includes('Device requirements:'));
+assert(ctx.draftFields_(data).PROJECT_DETAILS.includes('Device requirements: mobile'));
+console.log('PASS: motion requests omit Roblox device requirements; Roblox requests retain them.');
