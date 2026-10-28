@@ -15,7 +15,7 @@ assert.throws(()=>ctx.validateRequest_({...valid,start_date:'',end_date:'2026-10
 assert(fields.CLIENT_NAME.includes('Test studio'));assert(fields.CLIENT_CONTACT.includes('visitor@example.test'));
 assert(fields.PROJECT_DETAILS.includes('SGD 500.50'));assert(fields.PROJECT_DETAILS.includes('Wise'));
 assert(fields.START_DATE.includes('pending review'));assert.equal(fields.AGREED_SGD_PRICE,'To be confirmed by freelancer');
-for(const bad of [{budget:'1e4'},{budget:'-1'},{budget:'5.123'},{end_date:'2026-10-01'},{review_ack:'no'},{email:'x\nBcc:evil@example.test'},{payment_method:'robux',budget:'200',currency:'ROBUX'},{payment_method:'cash',currency:'ROBUX'}]) assert.throws(()=>ctx.validateRequest_({...valid,...bad}));
+for(const bad of [{budget:'1e4'},{budget:'-1'},{budget:'5.123'},{end_date:'2026-10-01'},{review_ack:'no'},{email:'x\nBcc:evil@example.test'},{payment_method:'robux',budget:'200',currency:'ROBUX'}]) assert.throws(()=>ctx.validateRequest_({...valid,...bad}));
 const result=ctx.doPost({contentLength:1000,parameter:valid});assert(result.includes('Request received for review'));
 assert.equal(emails.length,2);assert.equal(emails[0].to,'daniljy.aep@gmail.com');assert.equal(emails[0].cc,'denial.aep@gmail.com');assert.equal(emails[0].attachments.length,2);
 assert.equal(emails[1].to,valid.email);assert.equal(emails[1].attachments,undefined);assert(!emails[1].body.includes('docs.google.com'));
@@ -43,3 +43,8 @@ assert(ctx.doPost({contentLength:1000,parameter:{...valid,review_ack:'no'}}).inc
 assert.equal(ctx.publicValidationMessage_(new Error('Private file ID or OAuth token')), '');
 assert.equal(ctx.publicValidationMessage_(new Error('<script>alert(1)</script>')), '');
 console.log('PASS: actionable validation messages without exposing private errors or markup.');
+
+assert.equal(ctx.validateRequest_({...valid,payment_method:'',currency:'SGD'}).payment_method,'cash');
+assert.equal(ctx.validateRequest_({...valid,payment_method:'cash',currency:'ROBUX',budget:'25000'}).payment_method,'robux');
+assert.equal(ctx.validateRequest_({...valid,payment_method:'robux',currency:'USD'}).payment_method,'cash');
+console.log('PASS: currency determines payment type without a separate payment selector.');

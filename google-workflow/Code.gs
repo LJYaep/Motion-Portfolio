@@ -55,7 +55,9 @@ function validateRequest_(raw) {
   if (raw._honey || raw.company_website) throw new Error('Request could not be accepted.');
   const data = {};
   const fields = {name:100,client_group:100,email:254,service:30,message:5000,preferred_contact:20,contact_handle:100,payment_method:20,payment_channel:50,currency:10,budget:30,start_date:10,end_date:10,device_target:50,request_id:100};
-  Object.keys(fields).forEach(key => data[key] = text_(raw,key,fields[key],['name','email','service','message','payment_method'].includes(key)));
+  Object.keys(fields).forEach(key => data[key] = text_(raw,key,fields[key],['name','email','service','message'].includes(key)));
+  // The budget currency is authoritative; support older forms without a currency too.
+  data.payment_method = data.currency ? (data.currency === 'ROBUX' ? 'robux' : 'cash') : (data.payment_method || 'cash');
   if (!validContactEmail(data.email) || !PROJECT_TYPES[data.service]) throw new Error('Please check your email and project type.');
   if (!['cash','robux'].includes(data.payment_method)) throw new Error('Please choose a payment option.');
   data.preferred_contact = data.preferred_contact || 'email';

@@ -341,18 +341,16 @@ function validContactEmail(value) {
     document.addEventListener("visibilitychange", () => { if (!document.hidden) validateDates(); });
     const payment = $("#payment-method"), amount = $("#budget"), currency = $("#budget-currency");
     function updatePayment() {
-      const robux = payment.value === "robux";
+      const robux = currency.value === "ROBUX";
+      payment.value = robux ? "robux" : "cash";
       $("#robux-minimum-note").hidden = !robux;
-      currency.value = robux ? "ROBUX" : (currency.value === "ROBUX" ? "SGD" : currency.value);
-      currency.disabled = robux;
       amount.step = robux ? "1" : "0.01";
       const type = $("#service").value;
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
       $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to Discuss First. Whole numbers only. The Robux minimums below apply; the final price is confirmed after review." : "Enter an amount, or leave blank to Discuss First. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
     }
-    payment.addEventListener("change", updatePayment);
     $("#service").addEventListener("change", updatePayment);
-    currency.addEventListener("change", () => { if (currency.value === "ROBUX") payment.value = "robux"; updatePayment(); });
+    currency.addEventListener("change", updatePayment);
     if (hasAgreementDelivery) {
       form.setAttribute("action", agreementEndpoint);
       $("#processor-note").textContent = "Your details are processed through Dani’s private Google document and email workflow. The draft agreement goes to Dani for review first.";
