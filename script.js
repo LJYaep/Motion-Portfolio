@@ -276,19 +276,19 @@ const SITE_CONFIG = Object.freeze({
   // Numeric fields accept amounts, not currency symbols or scientific notation.
   $$("[type='number']").forEach(field => {
     let lastValid = field.value;
-    const numberText = /^\d*(?:\.\d{0,2})?$/;
+    const numberText = () => field.step === "1" ? /^\d*$/ : /^\d*(?:\.\d{0,2})?$/;
     field.addEventListener("keydown", event => {
       if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.length === 1 && !/[0-9.]/.test(event.key)) event.preventDefault();
     });
     field.addEventListener("beforeinput", event => {
-      if (event.data && /[^0-9.]/.test(event.data)) event.preventDefault();
+      if (event.data && (field.step === "1" ? /[^0-9]/ : /[^0-9.]/).test(event.data)) event.preventDefault();
     });
     field.addEventListener("paste", event => {
       const value = event.clipboardData?.getData("text").trim();
       if (value !== undefined && !/^\d+(?:\.\d{1,2})?$/.test(value)) event.preventDefault();
     });
     field.addEventListener("input", () => {
-      if (numberText.test(field.value)) lastValid = field.value;
+      if (numberText().test(field.value)) lastValid = field.value;
       else field.value = lastValid;
     });
   });
@@ -297,8 +297,37 @@ const SITE_CONFIG = Object.freeze({
   // never enter this file. Only a durable server acceptance counts as success.
   const form = $("#enquiry-form");
   if (form) {
-    const serviceParam = new URLSearchParams(window.location.search).get("service");
+    let serviceParam = new URLSearchParams(window.location.search).get("service");
+    if (["animation", "editing"].includes(serviceParam)) serviceParam = "motion";
+    const agreementEndpoint = window.LJY_PUBLIC_CONFIG?.agreementEndpoint || "";
+    const hasAgreementDelivery = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(agreementEndpoint);
+    const dateStart = $("#start-date"), dateEnd = $("#end-date");
+    function validateDates() {
+      dateEnd.min = dateStart.value;
+      dateEnd.setCustomValidity(dateStart.value && dateEnd.value && dateEnd.value < dateStart.value ? "Finish date must be on or after the start date." : "");
+    }
+    dateStart.addEventListener("change", validateDates);
+    dateEnd.addEventListener("change", validateDates);
+    const payment = $("#payment-method"), amount = $("#budget"), currency = $("#budget-currency");
+    function updatePayment() {
+      const robux = payment.value === "robux";
+      currency.value = robux ? "ROBUX" : (currency.value === "ROBUX" ? "SGD" : currency.value);
+      currency.disabled = robux;
+      amount.step = robux ? "1" : "0.01";
+      const type = $("#service").value;
+      amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
+      $("#budget-hint").textContent = robux ? "Robux is a backup option. Minimum: 6,000 for motion/videos; 25,000 for building/modelling. Combined work is quoted after review. Whole numbers only." : "Proposed amount only. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
+    }
+    payment.addEventListener("change", updatePayment);
+    $("#service").addEventListener("change", updatePayment);
+    currency.addEventListener("change", () => { if (currency.value === "ROBUX") payment.value = "robux"; updatePayment(); });
+    if (hasAgreementDelivery) {
+      form.setAttribute("action", agreementEndpoint);
+      $("#processor-note").textContent = "Your details are processed through Dani’s private Google document and email workflow. The draft agreement goes to Dani for review first.";
+    }
+    $("#request-id").value = window.crypto?.randomUUID?.() || `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     if ($$("#service option").some(option => option.value === serviceParam)) $("#service").value = serviceParam;
+    updatePayment();
     const preference = $("#preferred-contact");
     const handleField = $("#contact-handle-field");
     const handleInput = $("#contact-handle");
@@ -325,11 +354,11 @@ const SITE_CONFIG = Object.freeze({
     }));
 
     if (!SITE_CONFIG.enquiryEndpoint) {
-      $("#form-mode").textContent = "Submit through FormSubmit and complete the spam check. A confirmation email follows once the receiving address is activated.";
-      submit.textContent = "Send enquiry ↗";
+      $("#form-mode").textContent = hasAgreementDelivery ? "Your request prepares a draft agreement for Dani’s review. Dani will send you the reviewed agreement separately." : "Your project request goes to Dani for review. The agreement will be sent separately after scope, price and dates are confirmed.";
+      submit.textContent = "Send project request ↗";
     }
 
-    if (SITE_CONFIG.enquiryEndpoint && ["http:", "https:"].includes(window.location.protocol)) {
+    if (!hasAgreementDelivery && SITE_CONFIG.enquiryEndpoint && ["http:", "https:"].includes(window.location.protocol)) {
       fetch(SITE_CONFIG.enquiryEndpoint.replace(/\/enquiries$/, "/config"), { credentials: "same-origin" })
         .then(response => response.ok ? response.json() : null)
         .then(config => {
@@ -347,17 +376,19 @@ const SITE_CONFIG = Object.freeze({
     }
 
     form.addEventListener("input", () => {
+      $("#request-id").value = window.crypto?.randomUUID?.() || `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       if (!busy && submitted) {
         submitted = false;
         submit.disabled = false;
-        submit.textContent = "Send enquiry ↗";
+        submit.textContent = "Send project request ↗";
         status.hidden = true;
         $("#enquiry-result").hidden = true;
       }
     });
 
     form.addEventListener("submit", async event => {
-      if (!SITE_CONFIG.enquiryEndpoint && ["http:", "https:"].includes(window.location.protocol)) {
+      validateDates();
+      if ((hasAgreementDelivery || !SITE_CONFIG.enquiryEndpoint) && ["http:", "https:"].includes(window.location.protocol)) {
         // Native POST is required: FormSubmit autoresponses do not support AJAX.
         // Keep its CAPTCHA enabled and let the provider show the actual result.
         updatePreference();
@@ -368,15 +399,15 @@ const SITE_CONFIG = Object.freeze({
         if (preference.value === "email") handleInput.value = "";
         status.hidden = false;
         status.classList.remove("is-error");
-        status.textContent = "Continuing to the secure spam check…";
+        status.textContent = hasAgreementDelivery ? "Preparing your request for Dani’s review…" : "Continuing to the secure spam check…";
         return;
       }
       event.preventDefault();
       if (busy || submitted || !form.reportValidity()) return;
       const data = {
         name: $("#name").value.trim(), email: $("#email").value.trim(), service: $("#service").value,
-        budget: $("#budget").value.trim() ? `${$("#budget-currency").value} ${$("#budget").value.trim()}` : "", timeline: $("#timeline").value,
-        message: $("#message").value.trim(), preferred_contact: preference.value,
+        budget: $("#budget").value.trim() ? `${$("#budget-currency").value} ${$("#budget").value.trim()}` : "", timeline: [$("#start-date").value, $("#end-date").value].filter(Boolean).join(" to "),
+        message: [$("#message").value.trim(), "", `Client group: ${$("#client-group").value.trim() || "Not supplied"}`, `Requested start: ${$("#start-date").value || "To be discussed"}`, `Requested finish: ${$("#end-date").value || "To be discussed"}`, `Payment preference: ${payment.value}`, `Payment method: ${$("#payment-channel").value}`, `Device requirements: ${$("#device-target").value}`, "Request for freelancer review; no price or date is confirmed."].join("\n"), preferred_contact: preference.value,
         contact_handle: preference.value === "email" ? "" : handleInput.value.trim(),
         company_website: $("#company-website").value
       };
@@ -437,7 +468,7 @@ const SITE_CONFIG = Object.freeze({
         clearTimeout(timeout);
         busy = false;
         submit.disabled = submitted;
-        if (!submitted) submit.textContent = "Send enquiry ↗";
+        if (!submitted) submit.textContent = "Send project request ↗";
         $("#enquiry-result").hidden = false;
       }
     });
@@ -490,6 +521,19 @@ const SITE_CONFIG = Object.freeze({
       heroOrbit.appendChild(svg);
       heroOrbit.classList.add("orbit-drawn");
     }
+    function fitOrbitBelowNavigation() {
+      if (!heroOrbit || !orbitStar || !Number.isFinite(heroOrbit.offsetWidth)) return;
+      const hero = heroOrbit.closest(".hero"), parent = heroOrbit.offsetParent;
+      if (!hero || !parent) return;
+      heroOrbit.style.marginTop = "0px";
+      const angle = -22 * Math.PI / 180;
+      const radiusY = Math.hypot(heroOrbit.offsetWidth / 2 * Math.sin(angle), heroOrbit.offsetHeight / 2 * Math.cos(angle));
+      const starRadius = Math.hypot(orbitStar.offsetWidth, orbitStar.offsetHeight) / 2;
+      const top = parent.getBoundingClientRect().top + heroOrbit.offsetTop + heroOrbit.offsetHeight / 2 - radiusY - starRadius;
+      const minimum = hero.getBoundingClientRect().top + 16;
+      heroOrbit.style.marginTop = `${Math.ceil(Math.max(0, minimum - top))}px`;
+    }
+    fitOrbitBelowNavigation();
     function playOrbitEntrance() {
       if (!motionEnabled || !orbitLine) return;
       const timing = { duration: 1750, delay: 180, easing: "cubic-bezier(.35,0,.15,1)", fill: "backwards" };
@@ -571,7 +615,7 @@ const SITE_CONFIG = Object.freeze({
       if (!scrollFrame) scrollFrame = requestAnimationFrame(updateProgress);
     }
     window.addEventListener("scroll", scheduleProgress, { passive: true });
-    window.addEventListener("resize", scheduleProgress, { passive: true });
+    window.addEventListener("resize", () => { fitOrbitBelowNavigation(); scheduleProgress(); }, { passive: true });
     window.addEventListener("pageshow", scheduleProgress);
     document.addEventListener("visibilitychange", () => {
       document.body.classList.toggle("motion-paused", document.hidden);

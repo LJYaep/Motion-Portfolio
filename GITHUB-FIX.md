@@ -1,3 +1,5 @@
+> Agreement drafts: see [google-workflow/SETUP.md](google-workflow/SETUP.md). Document generation is prepared but requires a private Google template and deployed Apps Script URL before it is active.
+
 # GitHub Pages email submission — FormSubmit
 
 The live GitHub Pages form now POSTs directly to FormSubmit. It does not open an
