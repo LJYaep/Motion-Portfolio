@@ -335,6 +335,50 @@ const SITE_CONFIG = Object.freeze({
     const submit = $("#submit-enquiry");
     const status = $("#submission-status");
     let busy = false, submitted = false, messageText = "", requestKey = "", requestSignature = "";
+    let nativeTimeout;
+    function resetNativeSubmission() {
+      clearTimeout(nativeTimeout);
+      busy = false;
+      form.removeAttribute("aria-busy");
+      submit.disabled = false;
+      submit.textContent = "Send project request ↗";
+    }
+    window.addEventListener("pageshow", event => {
+      if (event.persisted) {
+        resetNativeSubmission();
+        status.hidden = false;
+        status.classList.add("is-error");
+        status.textContent = "You have returned to the form. Delivery is not confirmed here; check the provider’s result before submitting again.";
+      }
+    });
+    function watchNativeSubmission() {
+      // Navigation is not evidence of delivery. If the provider stalls or navigation
+      // is blocked, keep a recoverable local copy and never report false success.
+      busy = true;
+      form.setAttribute("aria-busy", "true");
+      submit.disabled = true;
+      submit.textContent = "Connecting…";
+      const labels = {name:"Client name",client_group:"Company / group",email:"Email",service:"Project type",preferred_contact:"Preferred reply",contact_handle:"Social username",payment_method:"Payment preference",payment_channel:"Payment method",currency:"Currency",budget:"Proposed budget",start_date:"Requested start",end_date:"Requested finish",device_target:"Device requirements",message:"Project details"};
+      const lines = ["LJY — Project request (delivery not confirmed)", ""];
+      Object.entries(labels).forEach(([name, label]) => {
+        const field = form.elements.namedItem(name);
+        if (!field) return;
+        const value = field.tagName === "SELECT" ? field.selectedOptions[0]?.textContent : field.value.trim();
+        if (value) lines.push(label + ": " + value);
+      });
+      messageText = lines.join("\n");
+      $("#enquiry-preview").value = messageText;
+      nativeTimeout = setTimeout(() => {
+        resetNativeSubmission();
+        status.hidden = false;
+        status.classList.add("is-error");
+        status.textContent = "The submission service is taking longer than expected. Delivery has not been confirmed. Keep a copy below and contact Dani by email or Instagram before retrying.";
+        $("#enquiry-result-title").textContent = "Keep a copy of your project request";
+        $("#enquiry-status").textContent = "Nothing on this page confirms delivery. You can copy or download the details for your records.";
+        $("#email-enquiry").hidden = true;
+        $("#enquiry-result").hidden = false;
+      }, 15000);
+    }
 
     function updatePreference() {
       const social = preference.value !== "email";
@@ -377,7 +421,7 @@ const SITE_CONFIG = Object.freeze({
     }
 
     form.addEventListener("input", () => {
-      $("#request-id").value = window.crypto?.randomUUID?.() || `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      if (!busy) $("#request-id").value = window.crypto?.randomUUID?.() || `request-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       if (!busy && submitted) {
         submitted = false;
         submit.disabled = false;
@@ -390,6 +434,7 @@ const SITE_CONFIG = Object.freeze({
     form.addEventListener("submit", async event => {
       validateDates();
       if ((hasAgreementDelivery || !SITE_CONFIG.enquiryEndpoint) && ["http:", "https:"].includes(window.location.protocol)) {
+        if (busy) { event.preventDefault(); return; }
         // Native POST is required: FormSubmit autoresponses do not support AJAX.
         // Keep its CAPTCHA enabled and let the provider show the actual result.
         updatePreference();
@@ -400,7 +445,8 @@ const SITE_CONFIG = Object.freeze({
         if (preference.value === "email") handleInput.value = "";
         status.hidden = false;
         status.classList.remove("is-error");
-        status.textContent = hasAgreementDelivery ? "Preparing your request for Dani’s review…" : "Continuing to the secure spam check…";
+        status.textContent = hasAgreementDelivery ? "Connecting to the agreement service…" : "Connecting to the submission service. Complete its spam check if prompted…";
+        watchNativeSubmission();
         return;
       }
       event.preventDefault();
