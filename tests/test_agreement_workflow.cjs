@@ -37,3 +37,9 @@ console.log('PASS: provider-neutral email formats, nonexistent domains, null MX 
 
 assert(ctx.draftFields_(ctx.validateRequest_({...valid,budget:''})).PROJECT_DETAILS.includes('Proposed budget: Discuss first'));
 console.log('PASS: blank budget is recorded as Discuss first.');
+
+assert(ctx.doPost({contentLength:1000,parameter:{...valid,service:'invalid'}}).includes('Please check your email and project type.'));
+assert(ctx.doPost({contentLength:1000,parameter:{...valid,review_ack:'no'}}).includes('Please acknowledge that this is a request for review.'));
+assert.equal(ctx.publicValidationMessage_(new Error('Private file ID or OAuth token')), '');
+assert.equal(ctx.publicValidationMessage_(new Error('<script>alert(1)</script>')), '');
+console.log('PASS: actionable validation messages without exposing private errors or markup.');

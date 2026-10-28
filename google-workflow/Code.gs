@@ -127,9 +127,35 @@ function sendOwnerDraft_(data, id, attachments) {
   // Recipients are fixed; the visitor never receives the agreement or a Drive link.
   MailApp.sendEmail({to:OWNER_EMAILS[0],cc:OWNER_EMAILS[1],replyTo:data.email,name:'LJY enquiries',subject:'DRAFT for review — ' + PROJECT_TYPES[data.service] + ' — ' + data.request_id,body:'New project request. Review this draft before sending it to the client.\n\nClient: ' + data.name + '\nEmail: ' + data.email + '\nPrivate editable draft: https://docs.google.com/document/d/' + id + '/edit\n\nThe client’s proposed budget is in Project Details. The agreed SGD price is left for you to confirm. Requested dates are marked pending review. No signature has been filled.\n\nReference: ' + data.request_id,attachments:attachments});
 }
-function outcome_(ok, reference) {
-  // Only fixed text and validated reference are rendered. No customer details in URLs.
-  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>LJY project request</title></head><body style="font:18px/1.6 Arial;padding:48px;max-width:680px;margin:auto;color:#071630;background:#f4f8ff"><h1>' + (ok ? 'Request received for review' : 'Request not confirmed') + '</h1><p>' + (ok ? 'Your project request has been received. Dani will review the details and send you the agreement separately. Proposed dates and prices are not yet confirmed.' : 'Your request could not be confirmed. Please contact Dani directly and quote the reference below. Do not assume that an agreement has been prepared.') + '</p><p>Reference: ' + reference + '</p><a href="' + SITE_URL + '" target="_top">Return to LJY</a></body></html>').setTitle('LJY project request');
+
+function publicValidationMessage_(error) {
+  const message = String(error.message || '');
+  const allowed = [
+    'Please check your email and project type.',
+    'Please choose a payment option.',
+    'Please provide your preferred contact details.',
+    'Please check the currency.',
+    'Budget must contain numbers only, with up to two decimal places.',
+    'Please check the minimum Robux budget for this project.',
+    'Please check the requested dates.',
+    'Start date must be today or later (Singapore time).',
+    'Finish date must be today or later (Singapore time).',
+    'Finish date must be on or after start date.',
+    'Please acknowledge that this is a request for review.',
+    'Please reload the form and try again.',
+    'Please remove line breaks from contact fields.',
+    'Email domain is not configured to receive email.'
+  ];
+  if (allowed.includes(message)) return message;
+  const fields = ['name','client group','email','service','message','preferred contact','contact handle','payment method','payment channel','currency','budget','start date','end date','device target','request id'];
+  if (fields.some(field => message === 'Please check ' + field + '.')) return message;
+  return '';
+}
+
+function outcome_(ok, reference, validationMessage) {
+  // Only fixed allowlisted validation text and validated references are rendered.
+  const detail = publicValidationMessage_({message:validationMessage || ''});
+  return HtmlService.createHtmlOutput('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>LJY project request</title></head><body style="font:18px/1.6 Arial;padding:48px;max-width:680px;margin:auto;color:#071630;background:#f4f8ff"><h1>' + (ok ? 'Request received for review' : 'Request not confirmed') + '</h1><p>' + (ok ? 'Your project request has been received. Dani will review the details and send you the agreement separately. Proposed dates and prices are not yet confirmed.' : 'Your request could not be confirmed. Please contact Dani directly and quote the reference below. Do not assume that an agreement has been prepared.') + '</p>' + (detail ? '<p><strong>Please correct:</strong> ' + detail + '</p>' : '') + '<p>Reference: ' + reference + '</p><a href="' + SITE_URL + '" target="_top">Return to LJY</a></body></html>').setTitle('LJY project request');
 }
 function doGet() { return outcome_(false,'Use the enquiry form to submit a new request.'); }
 function doPost(event) {
@@ -174,7 +200,7 @@ function doPost(event) {
     return outcome_(true,reference);
   } catch (error) {
     console.error('Agreement request failed: ' + String(error.message).slice(0,180));
-    return outcome_(false,reference);
+    return outcome_(false,reference,publicValidationMessage_(error));
   } finally { lock.releaseLock(); }
 }
 function checkSetup() {
