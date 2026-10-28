@@ -273,6 +273,26 @@ const SITE_CONFIG = Object.freeze({
     $$(".local-playback-note").forEach(note => { note.hidden = false; });
   }
 
+  // Numeric fields accept amounts, not currency symbols or scientific notation.
+  $$("[type='number']").forEach(field => {
+    let lastValid = field.value;
+    const numberText = /^\d*(?:\.\d{0,2})?$/;
+    field.addEventListener("keydown", event => {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.length === 1 && !/[0-9.]/.test(event.key)) event.preventDefault();
+    });
+    field.addEventListener("beforeinput", event => {
+      if (event.data && /[^0-9.]/.test(event.data)) event.preventDefault();
+    });
+    field.addEventListener("paste", event => {
+      const value = event.clipboardData?.getData("text").trim();
+      if (value !== undefined && !/^\d+(?:\.\d{1,2})?$/.test(value)) event.preventDefault();
+    });
+    field.addEventListener("input", () => {
+      if (numberText.test(field.value)) lastValid = field.value;
+      else field.value = lastValid;
+    });
+  });
+
   // The browser posts to the private server endpoint. SMTP and webhook secrets
   // never enter this file. Only a durable server acceptance counts as success.
   const form = $("#enquiry-form");
@@ -355,7 +375,7 @@ const SITE_CONFIG = Object.freeze({
       if (busy || submitted || !form.reportValidity()) return;
       const data = {
         name: $("#name").value.trim(), email: $("#email").value.trim(), service: $("#service").value,
-        budget: $("#budget").value.trim(), timeline: $("#timeline").value,
+        budget: $("#budget").value.trim() ? `${$("#budget-currency").value} ${$("#budget").value.trim()}` : "", timeline: $("#timeline").value,
         message: $("#message").value.trim(), preferred_contact: preference.value,
         contact_handle: preference.value === "email" ? "" : handleInput.value.trim(),
         company_website: $("#company-website").value

@@ -404,3 +404,8 @@ body:not(.motion-enabled) .art-core, body:not(.motion-enabled) .art-orbit, body:
 .orbit-drawn .orbit-line { stroke-dasharray: 1; stroke-dashoffset: 0; }
 .orbit-drawn .orbit-highlight { stroke: #71a6ff; stroke-width: 4; stroke-linecap: round; stroke-dasharray: .055 .945; opacity: 0; }
 .hero-orbit.orbit-drawn span { z-index: 1; left: 95%; right: auto; top: 28.206%; transform: translate(-50%, -50%); }
+
+.budget-inputs { display: flex; align-items: stretch; gap: 10px; }
+.budget-inputs #budget-currency { flex: 0 0 92px; width: 92px; padding-left: 10px; padding-right: 8px; }
+.budget-inputs #budget { flex: 1; width: 0; min-width: 0; }
+#budget-hint { margin-top: 8px; font-size: 11px; }
