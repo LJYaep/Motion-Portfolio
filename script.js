@@ -342,12 +342,13 @@ function validContactEmail(value) {
     const payment = $("#payment-method"), amount = $("#budget"), currency = $("#budget-currency");
     function updatePayment() {
       const robux = payment.value === "robux";
+      $("#robux-minimum-note").hidden = !robux;
       currency.value = robux ? "ROBUX" : (currency.value === "ROBUX" ? "SGD" : currency.value);
       currency.disabled = robux;
       amount.step = robux ? "1" : "0.01";
       const type = $("#service").value;
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
-      $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to discuss first. Robux is a backup option. Minimum: 6,000 for motion/videos; 25,000 for building/modelling. Choose Discuss first if you’re unsure of the project type; the budget is confirmed after review. Whole numbers only." : "Enter an amount, or leave blank to discuss first. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
+      $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to discuss first. Whole numbers only. The Robux minimums below apply; the final price is confirmed after review." : "Enter an amount, or leave blank to discuss first. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
     }
     payment.addEventListener("change", updatePayment);
     $("#service").addEventListener("change", updatePayment);
