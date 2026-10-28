@@ -27,3 +27,20 @@ class PagesTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     pages.build(dest, endpoint)
                 self.assertFalse(dest.exists())
+
+    def test_checked_in_google_endpoint_survives_default_build(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp) / "site"
+            pages.build(dest)
+            config = (dest / "public-config.js").read_text()
+            self.assertIn("https://script.google.com/macros/s/AKfycbwCfJTY6RK6Xvwf6XIm9XL1kLRB6gtlv19z3QVitkSTY-XmfnqTpYRwFZYZlXnfKvrgrQ/exec", config)
+            html = (dest / "contact.html").read_text()
+            self.assertIn('action="https://script.google.com/macros/s/AKfycbwCfJTY6RK6Xvwf6XIm9XL1kLRB6gtlv19z3QVitkSTY-XmfnqTpYRwFZYZlXnfKvrgrQ/exec"', html)
+            self.assertNotIn("formsubmit.co", html)
+
+    def test_explicit_agreement_endpoint_overrides_default(self):
+        with tempfile.TemporaryDirectory() as temp:
+            dest = Path(temp) / "site"
+            endpoint = "https://script.google.com/macros/s/test-deployment/exec"
+            pages.build(dest, agreement_endpoint=endpoint)
+            self.assertIn(endpoint, (dest / "public-config.js").read_text())

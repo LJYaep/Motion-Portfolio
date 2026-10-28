@@ -14,6 +14,13 @@ def build(destination, endpoint="", agreement_endpoint=""):
         parsed = urlsplit(endpoint)
         if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password or parsed.query or parsed.fragment or not parsed.path.endswith("/api/enquiries"):
             raise ValueError("ENQUIRY_ENDPOINT must be an HTTPS URL ending in /api/enquiries, without credentials, query or fragment")
+    # Retain the checked-in public Google endpoint when Actions variables are unset.
+    # GitHub Pages may also deploy directly from the branch; both paths must agree.
+    if not agreement_endpoint.strip():
+        source = (ROOT / "public-config.js").read_text()
+        prefix = "window.LJY_PUBLIC_CONFIG = Object.freeze("
+        config = json.loads(source.split(prefix, 1)[1].split(");", 1)[0])
+        agreement_endpoint = config.get("agreementEndpoint", "")
     agreement_endpoint = agreement_endpoint.strip()
     if agreement_endpoint:
         import re
