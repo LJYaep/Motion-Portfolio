@@ -1,3 +1,5 @@
+> GitHub Pages: start with [GITHUB-FIX.md](GITHUB-FIX.md) for safe publishing and connecting the email backend.
+
 # Activate enquiry email and Discord notifications
 
 The backend is implemented, but **live sending is not activated** until your

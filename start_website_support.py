@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parent
-PUBLIC_FILES = {"index.html", "work.html", "about.html", "services.html", "contact.html", "styles.css", "script.js"}
+PUBLIC_FILES = {"index.html", "work.html", "about.html", "services.html", "contact.html", "styles.css", "script.js", "public-config.js"}
 
 
 def is_public_path(path):

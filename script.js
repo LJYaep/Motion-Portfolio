@@ -2,10 +2,13 @@
 
 /* Public contact settings only. SMTP and webhook secrets belong in server.env.
    Serve this folder over HTTP for YouTube playback; no framework or build step. */
+const isGitHubPages = new URL(window.location.href).hostname.endsWith(".github.io");
+const configuredEndpoint = window.LJY_PUBLIC_CONFIG?.enquiryEndpoint || "";
+const enquiryEndpoint = configuredEndpoint || (isGitHubPages ? "" : "/api/enquiries");
 const SITE_CONFIG = Object.freeze({
   email: "daniljy.aep@gmail.com",
   emailRecipients: ["daniljy.aep@gmail.com", "denial.aep@gmail.com"],
-  enquiryEndpoint: "/api/enquiries",
+  enquiryEndpoint,
   discord: "", // Optional public profile/invite. Notification webhook stays on the server.
   instagram: "https://www.instagram.com/ljyaep/",
   youtube: "https://www.youtube.com/@LJYaep"
@@ -270,7 +273,12 @@ const SITE_CONFIG = Object.freeze({
       form.scrollIntoView({ behavior: reduceMotion ? "instant" : "smooth", block: "start" });
     }));
 
-    if (["http:", "https:"].includes(window.location.protocol)) {
+    if (!SITE_CONFIG.enquiryEndpoint) {
+      $("#form-mode").textContent = "Online submission is being set up. Fill in your details to open an email to both recipients, or contact me on Instagram.";
+      submit.textContent = "Prepare email ↗";
+    }
+
+    if (SITE_CONFIG.enquiryEndpoint && ["http:", "https:"].includes(window.location.protocol)) {
       fetch(SITE_CONFIG.enquiryEndpoint.replace(/\/enquiries$/, "/config"), { credentials: "same-origin" })
         .then(response => response.ok ? response.json() : null)
         .then(config => {
@@ -319,6 +327,15 @@ const SITE_CONFIG = Object.freeze({
       const mailLink = $("#email-enquiry");
       mailLink.href = `mailto:${SITE_CONFIG.emailRecipients.join(",")}?subject=${encodeURIComponent("Project enquiry — " + service)}&body=${encodeURIComponent(messageText)}`;
       mailLink.hidden = false;
+      if (!SITE_CONFIG.enquiryEndpoint) {
+        status.hidden = false;
+        status.classList.remove("is-error");
+        status.textContent = "Your enquiry is ready. Use Open email below, then send it from your email app. Nothing has been submitted yet.";
+        $("#enquiry-result-title").textContent = "Send your enquiry by email";
+        $("#enquiry-status").textContent = "This opens a draft addressed to both recipients. Automatic confirmation becomes available when online submission is connected.";
+        $("#enquiry-result").hidden = false;
+        return;
+      }
       const signature = JSON.stringify(data);
       if (signature !== requestSignature) {
         requestSignature = signature;
