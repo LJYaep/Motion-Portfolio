@@ -53,3 +53,21 @@ Official documentation:
 - https://developers.google.com/apps-script/reference/mail/mail-app
 - https://developers.google.com/apps-script/reference/document/body
 - https://developers.google.com/drive/api/guides/ref-export-formats
+
+## If Executions says Completed but the form says Request not confirmed
+
+The submission handler catches errors and returns an honest failure page, so
+Completed alone does not prove delivery. Opening the URL also creates a doGet
+run, which is not a form submission.
+
+Copy the latest Code.gs from this repository into the Apps Script editor, save,
+select diagnoseSetup in the function dropdown and click Run. Review the
+Execution log below the editor. This diagnostic reads the private template,
+checks placeholders, tests DOCX/PDF exports and checks remaining email quota.
+It does not modify the template, create drafts or send email. Its errors are
+uncaught so the failing step appears in the editor.
+
+Share the failing step and error text, or the final setup-check result. Never
+share OAuth tokens or passwords. After a fix, update the web-app deployment via
+Deploy → Manage deployments → Edit → New version → Deploy before testing the
+live form; saving editor code alone does not update the /exec deployment.

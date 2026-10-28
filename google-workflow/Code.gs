@@ -77,7 +77,7 @@ function renderDraft_(data, config) {
 function attachments_(id, reference) {
   const file = DriveApp.getFileById(id);
   const response = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) + '/export?mimeType=' + encodeURIComponent('application/vnd.openxmlformats-officedocument.wordprocessingml.document'), {headers:{Authorization:'Bearer ' + ScriptApp.getOAuthToken()},muteHttpExceptions:true});
-  if (response.getResponseCode() !== 200) throw new Error('Document export failed.');
+  if (response.getResponseCode() !== 200) throw new Error('Document export failed (HTTP ' + response.getResponseCode() + ').');
   return [response.getBlob().setName('DRAFT-LJY-' + reference + '.docx'),file.getAs(MimeType.PDF).setName('DRAFT-LJY-' + reference + '.pdf')];
 }
 function sendOwnerDraft_(data, id, attachments) {
@@ -140,4 +140,40 @@ function checkSetup() {
   if (file.getMimeType() !== MimeType.GOOGLE_DOCS || file.getSharingAccess() !== DriveApp.Access.PRIVATE || folder.getSharingAccess() !== DriveApp.Access.PRIVATE) throw new Error('Use a private Google Docs template and private folder.');
   MailApp.getRemainingDailyQuota();
   console.log('Private template and email service are available. Deploy and test a real request next.');
+}
+
+/* Run manually in the editor. This reads the template and tests exports;
+   it does not modify the template, create drafts or send any email.
+   Errors are deliberately uncaught so the editor shows the failing step. */
+function diagnoseSetup() {
+  function step(label, action) {
+    console.log('Checking: ' + label);
+    try {
+      const result = action();
+      console.log('PASS: ' + label);
+      return result;
+    } catch (error) {
+      throw new Error(label + ' — ' + String(error.message || error));
+    }
+  }
+  step('Template ID, output folder, private sharing and email permission', checkSetup);
+  const config = PropertiesService.getScriptProperties().getProperties();
+  step('Google Docs access and agreement placeholders', function () {
+    const body = DocumentApp.openById(config.TEMPLATE_ID).getBody();
+    ['CLIENT_NAME','CLIENT_CONTACT','PROJECT_TYPE','PROJECT_DETAILS','START_DATE','END_DATE','AGREED_SGD_PRICE'].forEach(function (key) {
+      if (!body.findText('\\{\\{' + key + '\\}\\}')) {
+        throw new Error('Template is missing {{' + key + '}}. Use the prepared Agreement-Template, converted to Google Docs.');
+      }
+    });
+  });
+  step('Word and PDF exports', function () {
+    const files = attachments_(config.TEMPLATE_ID, 'diagnostic-only');
+    if (!files || files.length !== 2) throw new Error('Both export formats are required.');
+  });
+  step('Remaining email quota', function () {
+    const quota = MailApp.getRemainingDailyQuota();
+    console.log('Remaining email recipients today: ' + quota);
+    if (quota < 3) throw new Error('Fewer than three recipients remain today. Retry after the quota resets.');
+  });
+  console.log('Setup checks passed. No email was sent. A live form submission is still needed to verify delivery.');
 }
