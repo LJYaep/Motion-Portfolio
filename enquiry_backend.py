@@ -19,7 +19,7 @@ import time
 import uuid
 
 OWNER_EMAILS = ("daniljy.aep@gmail.com", "denial.aep@gmail.com")
-SERVICES = {"motion": "Motion design", "animation": "2D / 3D animation", "editing": "Video editing", "roblox": "Roblox Development", "other": "Something else"}
+SERVICES = {"motion": "Motion design", "animation": "2D / 3D motion graphics", "editing": "Video editing", "roblox": "Roblox building / modelling", "other": "Something else"}
 EMAIL = re.compile(r"^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?\.[A-Za-z]{2,63}$")
 
 
