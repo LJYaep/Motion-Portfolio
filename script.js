@@ -299,6 +299,7 @@ const SITE_CONFIG = Object.freeze({
   if (form) {
     let serviceParam = new URLSearchParams(window.location.search).get("service");
     if (["animation", "editing"].includes(serviceParam)) serviceParam = "motion";
+    if (serviceParam === "both") serviceParam = "discuss";
     const agreementEndpoint = window.LJY_PUBLIC_CONFIG?.agreementEndpoint || "";
     const hasAgreementDelivery = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(agreementEndpoint);
     const dateStart = $("#start-date"), dateEnd = $("#end-date");
@@ -316,7 +317,7 @@ const SITE_CONFIG = Object.freeze({
       amount.step = robux ? "1" : "0.01";
       const type = $("#service").value;
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
-      $("#budget-hint").textContent = robux ? "Robux is a backup option. Minimum: 6,000 for motion/videos; 25,000 for building/modelling. Combined work is quoted after review. Whole numbers only." : "Proposed amount only. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
+      $("#budget-hint").textContent = robux ? "Robux is a backup option. Minimum: 6,000 for motion/videos; 25,000 for building/modelling. Choose Discuss first if you’re unsure of the project type; the budget is confirmed after review. Whole numbers only." : "Proposed amount only. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
     }
     payment.addEventListener("change", updatePayment);
     $("#service").addEventListener("change", updatePayment);

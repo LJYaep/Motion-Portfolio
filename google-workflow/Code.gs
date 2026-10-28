@@ -2,7 +2,7 @@
    The web endpoint accepts requests. The template and generated files stay private. */
 const OWNER_EMAILS = ['daniljy.aep@gmail.com', 'denial.aep@gmail.com'];
 const SITE_URL = 'https://denialaep.github.io/LJY/';
-const PROJECT_TYPES = {motion:'Motion Graphics / Videos',roblox:'Roblox Building',modelling:'Modelling',both:'Motion Graphics and Roblox Building / Modelling'};
+const PROJECT_TYPES = {motion:'Motion Graphics / Videos',roblox:'Roblox Building',modelling:'Modelling',discuss:'Discuss first'};
 const CURRENCIES = ['SGD','USD','EUR','GBP','AUD','CAD','MYR','JPY','ROBUX'];
 
 function text_(raw, key, limit, required) {
