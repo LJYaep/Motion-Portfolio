@@ -6,7 +6,7 @@ import shutil
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
-PUBLIC = ("index.html", "work.html", "about.html", "services.html", "contact.html", "styles.css", "script.js", "public-config.js")
+PUBLIC = ("index.html", "home.html", "work.html", "about.html", "services.html", "contact.html", "styles.css", "script.js", "public-config.js")
 
 def build(destination, endpoint="", agreement_endpoint=""):
     endpoint = endpoint.strip()

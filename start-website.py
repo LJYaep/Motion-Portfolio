@@ -114,7 +114,7 @@ def main():
     with ThreadingHTTPServer((host, port), handler) as server:
         server.application = service
         worker_stop, worker = service.start_worker()
-        url = f"http://127.0.0.1:{server.server_port}/index.html"
+        url = f"http://127.0.0.1:{server.server_port}/home.html"
         print("LJY portfolio is running.")
         print(f"Open: {url}")
         print("Enquiry email:", "configured" if settings.email_ready else "not configured; complete server.env to enable")

@@ -64,7 +64,7 @@ class PortfolioApplication:
 
         if method not in ("GET", "HEAD") or not is_public_path(path):
             return respond(404, {"error": "Not found."})
-        target = ROOT / (unquote(path).lstrip("/") or "index.html")
+        target = ROOT / (unquote(path).lstrip("/") or "home.html")
         try:
             stream = target.open("rb")
         except OSError:
