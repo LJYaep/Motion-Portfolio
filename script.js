@@ -295,6 +295,15 @@ const SITE_CONFIG = Object.freeze({
 
   // The browser posts to the private server endpoint. SMTP and webhook secrets
   // never enter this file. Only a durable server acceptance counts as success.
+function validContactEmail(value) {
+  if (typeof value !== "string" || value.length > 254 || /[\s\r\n]/.test(value)) return false;
+  const parts = value.split("@");
+  if (parts.length !== 2) return false;
+  const local = parts[0], domain = parts[1];
+  if (!local || local.length > 64 || !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local) || local.startsWith(".") || local.endsWith(".") || local.includes("..")) return false;
+  const labels = domain.split(".");
+  return labels.length > 1 && labels.every(label => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label)) && !/^\d+$/.test(labels[labels.length - 1]);
+}
   const form = $("#enquiry-form");
   if (form) {
     let serviceParam = new URLSearchParams(window.location.search).get("service");
@@ -302,6 +311,13 @@ const SITE_CONFIG = Object.freeze({
     if (serviceParam === "both") serviceParam = "discuss";
     const agreementEndpoint = window.LJY_PUBLIC_CONFIG?.agreementEndpoint || "";
     const hasAgreementDelivery = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(agreementEndpoint);
+    const emailField = $("#email");
+    function validateEmail() {
+      emailField.setCustomValidity(emailField.value && !validContactEmail(emailField.value) ? "Enter a complete email address, such as name@gmail.com or name@yourdomain.com." : "");
+    }
+    emailField.addEventListener("input", validateEmail);
+    emailField.addEventListener("blur", () => { emailField.value = emailField.value.trim(); validateEmail(); });
+    validateEmail();
     const dateStart = $("#start-date"), dateEnd = $("#end-date");
     function singaporeToday(now = new Date()) {
       const parts = new Intl.DateTimeFormat("en-GB", {
@@ -331,7 +347,7 @@ const SITE_CONFIG = Object.freeze({
       amount.step = robux ? "1" : "0.01";
       const type = $("#service").value;
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
-      $("#budget-hint").textContent = robux ? "Robux is a backup option. Minimum: 6,000 for motion/videos; 25,000 for building/modelling. Choose Discuss first if you’re unsure of the project type; the budget is confirmed after review. Whole numbers only." : "Proposed amount only. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
+      $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to discuss first. Robux is a backup option. Minimum: 6,000 for motion/videos; 25,000 for building/modelling. Choose Discuss first if you’re unsure of the project type; the budget is confirmed after review. Whole numbers only." : "Enter an amount, or leave blank to discuss first. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
     }
     payment.addEventListener("change", updatePayment);
     $("#service").addEventListener("change", updatePayment);
@@ -446,6 +462,7 @@ const SITE_CONFIG = Object.freeze({
     });
 
     form.addEventListener("submit", async event => {
+      validateEmail();
       validateDates();
       if ((hasAgreementDelivery || !SITE_CONFIG.enquiryEndpoint) && ["http:", "https:"].includes(window.location.protocol)) {
         if (busy) { event.preventDefault(); return; }

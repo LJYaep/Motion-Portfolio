@@ -5,6 +5,46 @@ const SITE_URL = 'https://ljyaep.github.io/Motion-Portfolio/';
 const PROJECT_TYPES = {motion:'Motion Graphics / Videos',roblox:'Roblox Building',modelling:'Modelling',discuss:'Discuss first'};
 const CURRENCIES = ['SGD','USD','EUR','GBP','AUD','CAD','MYR','JPY','ROBUX'];
 
+function validContactEmail(value) {
+  if (typeof value !== "string" || value.length > 254 || /[\s\r\n]/.test(value)) return false;
+  const parts = value.split("@");
+  if (parts.length !== 2) return false;
+  const local = parts[0], domain = parts[1];
+  if (!local || local.length > 64 || !/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(local) || local.startsWith(".") || local.endsWith(".") || local.includes("..")) return false;
+  const labels = domain.split(".");
+  return labels.length > 1 && labels.every(label => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label)) && !/^\d+$/.test(labels[labels.length - 1]);
+}
+
+function checkEmailDomain_(email) {
+  // DNS checks a domain's mail routing, not an individual mailbox's existence.
+  // Temporary DNS failures must not label a legitimate address as invalid.
+  const domain = email.split('@')[1].toLowerCase();
+  function lookup(type) {
+    const response = UrlFetchApp.fetch('https://dns.google/resolve?name=' + encodeURIComponent(domain) + '&type=' + type + '&edns_client_subnet=0.0.0.0%2F0', {muteHttpExceptions:true});
+    if (response.getResponseCode() !== 200) return null;
+    const result = JSON.parse(response.getContentText());
+    return result.Status === 0 || result.Status === 3 ? result : null;
+  }
+  let mx, a, aaaa;
+  try {
+    mx = lookup('MX');
+    if (!mx) return;
+    const mail = (mx.Answer || []).filter(record => record.type === 15);
+    if (mx.Status === 3 || mail.some(record => /^0\s+\.$/.test(record.data.trim()))) {
+      throw new Error('invalid-mail-domain');
+    }
+    if (mail.length) return;
+    // SMTP can use the domain address when no explicit MX is published.
+    a = lookup('A'); aaaa = lookup('AAAA');
+    if (!a || !aaaa) return;
+    if ((a.Answer || []).some(record => record.type === 1) || (aaaa.Answer || []).some(record => record.type === 28)) return;
+  } catch (error) {
+    if (error.message !== 'invalid-mail-domain') { console.warn('Email domain check temporarily unavailable.'); return; }
+  }
+  const error = new Error('Email domain is not configured to receive email.');
+  throw error;
+}
+
 function text_(raw, key, limit, required) {
   const value = String(raw[key] || '').trim();
   if ((required && !value) || value.length > limit || /[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value)) throw new Error('Please check ' + key.replace(/_/g, ' ') + '.');
@@ -16,7 +56,7 @@ function validateRequest_(raw) {
   const data = {};
   const fields = {name:100,client_group:100,email:254,service:30,message:5000,preferred_contact:20,contact_handle:100,payment_method:20,payment_channel:50,currency:10,budget:30,start_date:10,end_date:10,device_target:50,request_id:100};
   Object.keys(fields).forEach(key => data[key] = text_(raw,key,fields[key],['name','email','service','message','payment_method'].includes(key)));
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email) || !PROJECT_TYPES[data.service]) throw new Error('Please check your email and project type.');
+  if (!validContactEmail(data.email) || !PROJECT_TYPES[data.service]) throw new Error('Please check your email and project type.');
   if (!['cash','robux'].includes(data.payment_method)) throw new Error('Please choose a payment option.');
   data.preferred_contact = data.preferred_contact || 'email';
   if (!['email','discord','instagram'].includes(data.preferred_contact) || (data.preferred_contact !== 'email' && !data.contact_handle)) throw new Error('Please provide your preferred contact details.');
@@ -43,7 +83,7 @@ function digest_(value) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value).map(b => ('0' + ((b+256)%256).toString(16)).slice(-2)).join('');
 }
 function draftFields_(data) {
-  const budget = data.budget ? data.currency + ' ' + data.budget : 'To be discussed';
+  const budget = data.budget ? data.currency + ' ' + data.budget : 'Discuss first';
   return {
     CLIENT_NAME: data.name + (data.client_group ? ' / ' + data.client_group : ''),
     CLIENT_CONTACT: data.email + (data.preferred_contact !== 'email' ? '\nPreferred contact: ' + data.preferred_contact + ' — ' + data.contact_handle : ''),
@@ -110,6 +150,7 @@ function doPost(event) {
     const countKey = 'daily_' + day, emailKey = 'email_' + day + '_' + digest_(data.email.toLowerCase());
     if (!record && (Number(config[countKey] || 0) >= 15 || Number(config[emailKey] || 0) >= 3)) throw new Error('Daily submission limit reached.');
     if (MailApp.getRemainingDailyQuota() < 3) throw new Error('Daily email quota is temporarily unavailable.');
+    if (!record) checkEmailDomain_(data.email);
     if (!record) {
       record = {signature:signature,created:Date.now(),sent:false};
       props.setProperty(key,JSON.stringify(record));

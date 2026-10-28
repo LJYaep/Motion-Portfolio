@@ -2,7 +2,8 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const source=fs.readFileSync(require('node:path').join(__dirname,'../google-workflow/Code.gs'),'utf8');
 const values={TEMPLATE_ID:'private-template',OUTPUT_FOLDER_ID:'private-folder'};
 const emails=[];let renders=0;
-const ctx={console:{warn(){},error(){},log(){}},Date,JSON,MailApp:{getRemainingDailyQuota:()=>100,sendEmail:email=>emails.push(email)},PropertiesService:{getScriptProperties:()=>({getProperties:()=>({...values}),setProperty:(k,v)=>values[k]=v,deleteProperty:k=>delete values[k]})},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},Utilities:{getUuid:()=>crypto.randomUUID(),DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...crypto.createHash('sha256').update(s).digest()],formatDate:()=> '2026-10-28'},HtmlService:{createHtmlOutput:s=>({setTitle:()=>s})}};
+const dnsFetch=()=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify({Status:0,Answer:[{type:15,data:'10 mail.example.test.'}]})});
+const ctx={UrlFetchApp:{fetch:dnsFetch},console:{warn(){},error(){},log(){}},Date,JSON,MailApp:{getRemainingDailyQuota:()=>100,sendEmail:email=>emails.push(email)},PropertiesService:{getScriptProperties:()=>({getProperties:()=>({...values}),setProperty:(k,v)=>values[k]=v,deleteProperty:k=>delete values[k]})},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},Utilities:{getUuid:()=>crypto.randomUUID(),DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...crypto.createHash('sha256').update(s).digest()],formatDate:()=> '2026-10-28'},HtmlService:{createHtmlOutput:s=>({setTitle:()=>s})}};
 vm.createContext(ctx);vm.runInContext(source,ctx);
 ctx.renderDraft_=()=>{renders++;return 'private-generated-doc';};ctx.attachments_=()=>['DOCX-blob','PDF-blob'];
 const valid={name:'Test visitor',client_group:'Test studio',email:'visitor@example.test',service:'roblox',message:'A detailed sci-fi room.',preferred_contact:'discord',contact_handle:'visitor',payment_method:'cash',payment_channel:'Wise',currency:'SGD',budget:'500.50',start_date:'2026-11-01',end_date:'2026-11-15',device_target:'mobile',review_ack:'yes',request_id:'request-test-12345678'};
@@ -22,3 +23,17 @@ ctx.doPost({contentLength:1000,parameter:valid});assert.equal(emails.length,2);a
 const conflict=ctx.doPost({contentLength:1000,parameter:{...valid,message:'Changed request'}});assert(conflict.includes('Request not confirmed'));assert.equal(emails.length,2);
 const invalid=ctx.doPost({contentLength:1000,parameter:{...valid,email:'bad'}});assert(invalid.includes('Request not confirmed'));
 console.log('PASS: agreement field mapping, date/payment validation, fixed owner attachments, receipt without agreement, retry deduplication and honest failure. Google transports mocked.');
+
+for (const address of ['person@gmail.com','person+project@outlook.com','person@studio.design','person@school.edu.sg','person@sub.company.com']) assert(ctx.validContactEmail(address));
+for (const address of ['no-at','person@gmail','person@@gmail.com','.person@gmail.com','person..name@gmail.com','person@-gmail.com','person@gmail..com','person@gmail.com extra']) assert(!ctx.validContactEmail(address));
+ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify({Status:3})});
+assert.throws(()=>ctx.checkEmailDomain_('person@missing.invalid'));
+ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify({Status:0,Answer:[{type:15,data:'0 .'}]})});
+assert.throws(()=>ctx.checkEmailDomain_('person@no-mail.example'));
+ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>503});
+assert.doesNotThrow(()=>ctx.checkEmailDomain_('person@gmail.com'));
+ctx.UrlFetchApp.fetch=dnsFetch;
+console.log('PASS: provider-neutral email formats, nonexistent domains, null MX and temporary DNS failure.');
+
+assert(ctx.draftFields_(ctx.validateRequest_({...valid,budget:''})).PROJECT_DETAILS.includes('Proposed budget: Discuss first'));
+console.log('PASS: blank budget is recorded as Discuss first.');
