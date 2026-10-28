@@ -433,3 +433,50 @@ body:not(.motion-enabled) .art-core, body:not(.motion-enabled) .art-orbit, body:
 .motion-enabled .presence-sky svg { transition: opacity .6s ease, transform .8s cubic-bezier(.22,1,.36,1); }
 .local-presence .presence-fallback { grid-column: 1/-1; margin: 0; font: 11px/1.6 var(--mono); }
 @media (max-width: 700px) { .local-presence { padding: 18px; grid-template-columns: minmax(0,1fr) 60px; } .presence-sky { width: 60px; height: 60px; } .presence-time { font-size: clamp(26px,7vw,38px); } .presence-separator { display: none !important; } .presence-details > span { display: block; } }
+
+/* Custom project-date controls. Native date inputs remain the no-JavaScript fallback. */
+body.date-picker-open { overflow: hidden; }
+.date-input-control { display: flex; min-width: 0; border: 1px solid #8093b3; border-radius: 10px; background: #ffffffb3; }
+.date-input-control input { flex: 1; min-width: 0; width: 0; border: 0; border-radius: 10px 0 0 10px; background: transparent; font-family: var(--sans); font-size: 16px; font-variant-numeric: tabular-nums; }
+.date-input-control input:focus-visible { outline-offset: -3px; }
+.date-open-button { flex: 0 0 52px; display: grid; place-items: center; border: 0; border-left: 1px solid var(--line); border-radius: 0 10px 10px 0; background: #e7efff; color: var(--blue); }
+.date-open-button svg { width: 23px; height: 23px; stroke: currentColor; stroke-width: 1.6; }
+.date-open-button:hover { background: #d6e4ff; }
+.date-format-hint { font-family: var(--sans); font-size: 12px; }
+.date-field-error { color: #a51e32; font-size: 14px; line-height: 1.5; }
+.date-input-control:has([aria-invalid="true"]) { border-color: #a51e32; }
+.date-dialog { width: min(440px, calc(100% - 24px)); max-height: calc(100dvh - 24px); padding: clamp(12px, 4vw, 24px); border: 1px solid #8d9fbc; border-radius: 22px; background: var(--paper); color: var(--ink); box-shadow: 0 24px 80px #07163038; overflow-y: auto; overscroll-behavior: contain; }
+.date-dialog::backdrop { background: #07163066; backdrop-filter: blur(5px); }
+.date-dialog-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; }
+.date-kicker { font: 11px/1.5 var(--mono); letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+.date-dialog h2 { font-size: 23px; letter-spacing: -.035em; line-height: 1.2; }
+.date-dialog button { color: var(--ink); }
+.date-dialog .date-icon-button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; flex: 0 0 44px; background: #e4ecfa; border: 1px solid transparent; border-radius: 12px; font: 30px/1 var(--sans); }
+.date-dialog .date-icon-button:hover:not(:disabled) { border-color: var(--blue); background: #dbe7ff; }
+.date-month-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.date-dialog h3 { font: 700 18px/1.4 var(--sans); letter-spacing: -.02em; text-align: center; }
+.date-calendar { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 2px; }
+.date-calendar th { height: 30px; font: 600 12px/1.4 var(--sans); color: var(--muted); text-align: center; }
+.date-calendar td { padding: 0; height: 44px; text-align: center; }
+.date-calendar button { display: block; width: 100%; min-height: 44px; padding: 0; border: 1px solid transparent; border-radius: 10px; background: transparent; font: 500 16px/1 var(--sans); font-variant-numeric: tabular-nums; }
+.date-calendar button:hover:not(:disabled) { background: #e1ebff; border-color: #7b9bda; }
+.date-calendar button[aria-current="date"] { border-color: var(--blue); font-weight: 700; }
+.date-calendar button.is-selected { color: white; background: var(--blue); border-color: var(--blue); }
+.date-calendar button.is-selected:hover { background: #0644ca; }
+.date-calendar button:disabled { color: #5e6c83; opacity: .65; text-decoration: line-through; }
+.date-calendar button:focus-visible { outline: 3px solid var(--ink); outline-offset: 0; }
+.date-calendar-note { margin-top: 16px; font: 13px/1.55 var(--sans); color: var(--muted); }
+.date-calendar-help { margin-top: 10px; font: 12px/1.55 var(--sans); color: var(--muted); }
+.date-dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.date-dialog-actions button { min-height: 44px; padding: 10px 13px; border: 1px solid #8196b7; border-radius: 10px; background: transparent; font: 600 13px/1.3 var(--sans); }
+.date-dialog-actions button:first-child { color: white; background: var(--blue); border-color: var(--blue); }
+.date-dialog-actions button:last-child { margin-left: auto; }
+.date-dialog-actions button:hover:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
+@media (prefers-reduced-motion: no-preference) {
+  .motion-enabled .date-dialog[open] { animation: date-arrive .22s cubic-bezier(.22,1,.36,1); }
+  @keyframes date-arrive { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+}
+@media (forced-colors: active) {
+  .date-calendar button.is-selected { outline: 2px solid Highlight; }
+  .date-calendar button[aria-current="date"] { border: 2px solid CanvasText; }
+}

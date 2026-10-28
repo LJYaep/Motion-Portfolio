@@ -304,6 +304,160 @@ function validContactEmail(value) {
   const labels = domain.split(".");
   return labels.length > 1 && labels.every(label => /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(label)) && !/^\d+$/.test(labels[labels.length - 1]);
 }
+
+  // Progressive enhancement: native date fields remain when dialog support is absent.
+  function enhanceDatePickers(fields, validateDates, todayISO) {
+    if (!window.HTMLDialogElement || !HTMLDialogElement.prototype.showModal) return;
+    const dayNames = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    const longDate = new Intl.DateTimeFormat("en-SG", {timeZone:"UTC",weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    const monthDate = new Intl.DateTimeFormat("en-SG", {timeZone:"UTC",month:"long",year:"numeric"});
+    const iso = date => date.toISOString().slice(0,10);
+    const dateOf = value => new Date(value + "T00:00:00Z");
+    const display = value => value ? value.slice(8,10) + "/" + value.slice(5,7) + "/" + value.slice(0,4) : "";
+    function parse(text) {
+      if (!text.trim()) return "";
+      const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(text.trim());
+      if (!match || Number(match[3]) < 1000) return null;
+      const value = match[3] + "-" + match[2].padStart(2,"0") + "-" + match[1].padStart(2,"0");
+      const date = dateOf(value);
+      return Number.isFinite(date.getTime()) && iso(date) === value ? value : null;
+    }
+    const dialog = document.createElement("dialog");
+    dialog.className = "date-dialog";
+    dialog.id = "project-date-dialog";
+    dialog.setAttribute("aria-labelledby","date-dialog-title");
+    dialog.setAttribute("aria-describedby","date-dialog-help");
+    dialog.innerHTML = '<div class="date-dialog-top"><div><p class="date-kicker">PROJECT DATES · SGT</p><h2 id="date-dialog-title">Choose a date</h2></div><button type="button" class="date-icon-button" data-date-close aria-label="Close calendar">×</button></div><div class="date-month-nav"><button type="button" class="date-icon-button" data-date-prev aria-label="Previous month">‹</button><h3 id="date-month-title" aria-live="polite" aria-atomic="true"></h3><button type="button" class="date-icon-button" data-date-next aria-label="Next month">›</button></div><table class="date-calendar" role="grid" aria-labelledby="date-month-title"><thead><tr></tr></thead><tbody></tbody></table><p class="date-calendar-note" data-date-range></p><p id="date-dialog-help" class="date-calendar-help">Use arrow keys to move by day, Page Up / Down for months, or Shift + Page Up / Down for years. Press Escape to close.</p><div class="date-dialog-actions"><button type="button" data-date-today>Today</button><button type="button" data-date-clear>Discuss First</button><button type="button" data-date-close>Cancel</button></div>';
+    dayNames.forEach(name => {
+      const th = document.createElement("th");
+      th.scope = "col"; th.abbr = name; th.textContent = name.slice(0,2);
+      $("thead tr",dialog).appendChild(th);
+    });
+    document.body.appendChild(dialog);
+    let active, focused = "", returnFocus;
+    const body = $("tbody",dialog);
+    const clamp = value => value < active.original.min ? active.original.min : value > "9999-12-31" ? "9999-12-31" : value;
+    function moveMonths(value, count) {
+      const date = dateOf(value), day = date.getUTCDate();
+      date.setUTCDate(1); date.setUTCMonth(date.getUTCMonth()+count);
+      const last = new Date(date.getTime()); last.setUTCMonth(last.getUTCMonth()+1); last.setUTCDate(0);
+      date.setUTCDate(Math.min(day,last.getUTCDate()));
+      return clamp(iso(date));
+    }
+    function render(focusDay) {
+      const date = dateOf(focused), year = date.getUTCFullYear(), month = date.getUTCMonth();
+      $("#date-month-title",dialog).textContent = monthDate.format(date);
+      const first = dateOf(iso(date)); first.setUTCDate(1);
+      const offset = (first.getUTCDay()+6)%7;
+      const last = new Date(first.getTime()); last.setUTCMonth(month+1); last.setUTCDate(0);
+      body.replaceChildren();
+      let row;
+      for (let cell=0; cell<Math.ceil((offset+last.getUTCDate())/7)*7; cell++) {
+        if (cell%7===0) { row=document.createElement("tr"); body.appendChild(row); }
+        const td=document.createElement("td"); row.appendChild(td);
+        const number=cell-offset+1;
+        if (number<1 || number>last.getUTCDate()) continue;
+        const day=new Date(first.getTime()); day.setUTCDate(number);
+        const value=iso(day), button=document.createElement("button");
+        button.type="button"; button.textContent=String(number); button.dataset.date=value;
+        button.disabled=value<active.original.min;
+        button.tabIndex=value===focused ? 0 : -1;
+        button.setAttribute("aria-label",longDate.format(day));
+        if (value===todayISO()) button.setAttribute("aria-current","date");
+        if (value===active.original.value) { td.setAttribute("aria-selected","true"); button.classList.add("is-selected"); }
+        button.addEventListener("click",()=>choose(value));
+        td.appendChild(button);
+      }
+      $("[data-date-prev]",dialog).disabled=iso(first).slice(0,7)<=active.original.min.slice(0,7);
+      $("[data-date-next]",dialog).disabled=year===9999 && month===11;
+      $("[data-date-today]",dialog).disabled=todayISO()<active.original.min;
+      $("[data-date-range]",dialog).textContent="Earliest date: "+longDate.format(dateOf(active.original.min))+". Singapore Time (UTC+8).";
+      if (focusDay) $("[data-date='"+focused+"']",dialog)?.focus();
+    }
+    function choose(value) {
+      validateDates();
+      if (value && value<active.original.min) { focused=active.original.min; render(true); return; }
+      active.set(value);
+      dialog.close();
+    }
+    $("[data-date-prev]",dialog).addEventListener("click",()=>{ focused=moveMonths(focused,-1); render(false); });
+    $("[data-date-next]",dialog).addEventListener("click",()=>{ focused=moveMonths(focused,1); render(false); });
+    $("[data-date-today]",dialog).addEventListener("click",()=>choose(todayISO()));
+    $("[data-date-clear]",dialog).addEventListener("click",()=>choose(""));
+    $$("[data-date-close]",dialog).forEach(button=>button.addEventListener("click",()=>dialog.close()));
+    dialog.addEventListener("close",()=>{ document.body.classList.remove("date-picker-open"); if(active) active.button.setAttribute("aria-expanded","false"); returnFocus?.focus(); });
+    body.addEventListener("keydown",event=>{
+      const current=event.target.dataset.date;
+      if (!current) return;
+      let next=dateOf(current), handled=true;
+      const weekday=(next.getUTCDay()+6)%7;
+      if (event.key==="ArrowLeft") next.setUTCDate(next.getUTCDate()-1);
+      else if (event.key==="ArrowRight") next.setUTCDate(next.getUTCDate()+1);
+      else if (event.key==="ArrowUp") next.setUTCDate(next.getUTCDate()-7);
+      else if (event.key==="ArrowDown") next.setUTCDate(next.getUTCDate()+7);
+      else if (event.key==="Home") next.setUTCDate(next.getUTCDate()-weekday);
+      else if (event.key==="End") next.setUTCDate(next.getUTCDate()+6-weekday);
+      else if (event.key==="PageUp" || event.key==="PageDown") next=dateOf(moveMonths(current,(event.key==="PageUp" ? -1 : 1)*(event.shiftKey ? 12 : 1)));
+      else handled=false;
+      if (handled) { event.preventDefault(); focused=clamp(iso(next)); render(true); }
+    });
+    fields.forEach(original=>{
+      const label=document.querySelector("label[for='"+original.id+"']");
+      const name=label.textContent.replace(/\(optional\)/,"").trim();
+      const control=document.createElement("div"); control.className="date-input-control";
+      const text=document.createElement("input");
+      text.type="text"; text.id=original.id+"-display"; text.autocomplete="off";
+      text.placeholder="DD/MM/YYYY"; text.maxLength=10;
+      text.setAttribute("aria-describedby",((original.getAttribute("aria-describedby") || "")+" "+original.id+"-format "+original.id+"-error").trim());
+      const button=document.createElement("button"); button.type="button"; button.className="date-open-button";
+      button.innerHTML='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg>';
+      button.setAttribute("aria-haspopup","dialog"); button.setAttribute("aria-controls",dialog.id); button.setAttribute("aria-expanded","false");
+      const hint=document.createElement("span"); hint.className="meta date-format-hint"; hint.id=original.id+"-format"; hint.textContent="Day / month / year — type a date or open the calendar.";
+      const error=document.createElement("span"); error.className="date-field-error"; error.id=original.id+"-error"; error.hidden=true; error.setAttribute("aria-live","polite");
+      let parseError="", rangeError="", touched=false;
+      function validity() {
+        const message=parseError || rangeError;
+        text.setCustomValidity(message);
+        text.setAttribute("aria-invalid",message ? "true" : "false");
+        error.textContent=message; error.hidden=!message || !touched;
+      }
+      const ui={
+        original,text,button,
+        validate(message) { rangeError=message; validity(); },
+        set(value) {
+          parseError=""; text.value=display(value); original.value=value; touched=true;
+          button.setAttribute("aria-label",value ? "Change "+name.toLowerCase()+", "+longDate.format(dateOf(value)) : "Choose "+name.toLowerCase());
+          original.dispatchEvent(new Event("input",{bubbles:true}));
+          original.dispatchEvent(new Event("change",{bubbles:true}));
+          validateDates(); validity();
+        }
+      };
+      original._dateUI=ui;
+      original.type="hidden"; label.htmlFor=text.id;
+      control.append(text,button); original.after(control,hint,error);
+      text.addEventListener("beforeinput",event=>{ if(event.data && /[^0-9/]/.test(event.data)) event.preventDefault(); });
+      text.addEventListener("input",()=>{
+        const value=parse(text.value);
+        parseError=value===null ? "Enter a real date as DD/MM/YYYY, or choose one from the calendar." : "";
+        original.value=value || "";
+        button.setAttribute("aria-label","Choose "+name.toLowerCase());
+        original.dispatchEvent(new Event("change",{bubbles:true}));
+        validateDates(); validity();
+      });
+      text.addEventListener("blur",()=>{ touched=true; const value=parse(text.value); if(value!==null) text.value=display(value); validity(); });
+      text.addEventListener("invalid",()=>{ touched=true; validity(); });
+      button.addEventListener("click",()=>{
+        validateDates(); active=ui; returnFocus=button;
+        focused=clamp(original.value || original.min || todayISO());
+        $("#date-dialog-title",dialog).textContent=name;
+        button.setAttribute("aria-expanded","true");
+        render(false); document.body.classList.add("date-picker-open"); dialog.showModal(); $("[data-date='"+focused+"']",dialog)?.focus();
+      });
+      text.addEventListener("keydown",event=>{ if(event.altKey && event.key==="ArrowDown") { event.preventDefault(); button.click(); } });
+      ui.set(original.value);
+    });
+  }
+
   const form = $("#enquiry-form");
   if (form) {
     let serviceParam = new URLSearchParams(window.location.search).get("service");
@@ -329,9 +483,13 @@ function validContactEmail(value) {
     function validateDates() {
       const today = singaporeToday();
       dateStart.min = today;
-      dateStart.setCustomValidity(dateStart.value && dateStart.value < today ? "Start date must be today or later (Singapore time)." : "");
+      const startError = dateStart.value && dateStart.value < today ? "Start date must be today or later (Singapore time)." : "";
+      dateStart.setCustomValidity(startError);
+      dateStart._dateUI?.validate(startError);
       dateEnd.min = dateStart.value && dateStart.value > today ? dateStart.value : today;
-      dateEnd.setCustomValidity(dateEnd.value && dateEnd.value < dateEnd.min ? "Finish date must be today or later and on or after the start date." : "");
+      const endError = dateEnd.value && dateEnd.value < dateEnd.min ? "Finish date must be today or later and on or after the start date." : "";
+      dateEnd.setCustomValidity(endError);
+      dateEnd._dateUI?.validate(endError);
     }
     validateDates();
     dateStart.addEventListener("change", validateDates);
@@ -339,6 +497,8 @@ function validContactEmail(value) {
     form.addEventListener("focusin", validateDates);
     window.addEventListener("pageshow", validateDates);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) validateDates(); });
+    enhanceDatePickers([dateStart, dateEnd], validateDates, singaporeToday);
+    validateDates();
     const payment = $("#payment-method"), amount = $("#budget"), currency = $("#budget-currency");
     function updatePayment() {
       const robux = currency.value === "ROBUX";
