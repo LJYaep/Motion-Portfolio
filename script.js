@@ -622,4 +622,42 @@ const SITE_CONFIG = Object.freeze({
     });
     updateProgress();
   }
+  // Show Dani's local time, independent of the visitor's device time zone.
+  function singaporeClockState(now) {
+    const zone = "Asia/Singapore";
+    const timeFormat = new Intl.DateTimeFormat("en-GB", { timeZone: zone, hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+    const hour = Number(timeFormat.formatToParts(now).find(part => part.type === "hour").value);
+    return {
+      time: timeFormat.format(now),
+      date: new Intl.DateTimeFormat("en-SG", { timeZone: zone, weekday: "short", day: "numeric", month: "short" }).format(now),
+      period: hour >= 7 && hour < 19 ? "day" : "night"
+    };
+  }
+  const localClock = $("#local-time");
+  if (localClock) {
+    const panel = $("#local-presence");
+    let clockTimer = null;
+    function updateLocalClock() {
+      const now = new Date(), state = singaporeClockState(now);
+      localClock.textContent = state.time;
+      localClock.setAttribute("datetime", now.toISOString());
+      $("#local-date").textContent = state.date + " · SGT (UTC+8)";
+      $("#local-period").textContent = state.period === "day" ? "Daytime" : "Nighttime";
+      panel.setAttribute("data-period", state.period);
+    }
+    function pauseLocalClock() {
+      if (clockTimer !== null) window.clearInterval(clockTimer);
+      clockTimer = null;
+    }
+    function resumeLocalClock() {
+      pauseLocalClock();
+      updateLocalClock();
+      if (!document.hidden) clockTimer = window.setInterval(updateLocalClock, 1000);
+    }
+    document.addEventListener("visibilitychange", resumeLocalClock);
+    window.addEventListener("pagehide", pauseLocalClock);
+    window.addEventListener("pageshow", resumeLocalClock);
+    resumeLocalClock();
+  }
+
 })();
