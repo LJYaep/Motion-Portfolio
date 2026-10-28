@@ -348,7 +348,7 @@ function validContactEmail(value) {
       amount.step = robux ? "1" : "0.01";
       const type = $("#service").value;
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
-      $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to discuss first. Whole numbers only. The Robux minimums below apply; the final price is confirmed after review." : "Enter an amount, or leave blank to discuss first. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
+      $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to Discuss First. Whole numbers only. The Robux minimums below apply; the final price is confirmed after review." : "Enter an amount, or leave blank to Discuss First. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
     }
     payment.addEventListener("change", updatePayment);
     $("#service").addEventListener("change", updatePayment);

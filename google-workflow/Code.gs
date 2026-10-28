@@ -2,7 +2,7 @@
    The web endpoint accepts requests. The template and generated files stay private. */
 const OWNER_EMAILS = ['daniljy.aep@gmail.com', 'denial.aep@gmail.com'];
 const SITE_URL = 'https://ljyaep.github.io/Motion-Portfolio/';
-const PROJECT_TYPES = {motion:'Motion Graphics / Videos',roblox:'Roblox Building',modelling:'Modelling',discuss:'Discuss first'};
+const PROJECT_TYPES = {motion:'Motion Graphics / Videos',roblox:'Roblox Building',modelling:'Modelling',discuss:'Discuss First'};
 const CURRENCIES = ['SGD','USD','EUR','GBP','AUD','CAD','MYR','JPY','ROBUX'];
 
 function validContactEmail(value) {
@@ -83,7 +83,7 @@ function digest_(value) {
   return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value).map(b => ('0' + ((b+256)%256).toString(16)).slice(-2)).join('');
 }
 function draftFields_(data) {
-  const budget = data.budget ? data.currency + ' ' + data.budget : 'Discuss first';
+  const budget = data.budget ? data.currency + ' ' + data.budget : 'Discuss First';
   return {
     CLIENT_NAME: data.name + (data.client_group ? ' / ' + data.client_group : ''),
     CLIENT_CONTACT: data.email + (data.preferred_contact !== 'email' ? '\nPreferred contact: ' + data.preferred_contact + ' — ' + data.contact_handle : ''),
