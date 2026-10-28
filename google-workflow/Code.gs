@@ -30,6 +30,9 @@ function validateRequest_(raw) {
   ['start_date','end_date'].forEach(key => {
     if (data[key] && (!/^\d{4}-\d{2}-\d{2}$/.test(data[key]) || new Date(data[key] + 'T00:00:00Z').toISOString().slice(0,10) !== data[key])) throw new Error('Please check the requested dates.');
   });
+  const today = Utilities.formatDate(new Date(), 'Asia/Singapore', 'yyyy-MM-dd');
+  if (data.start_date && data.start_date < today) throw new Error('Start date must be today or later (Singapore time).');
+  if (data.end_date && data.end_date < today) throw new Error('Finish date must be today or later (Singapore time).');
   if (data.start_date && data.end_date && data.end_date < data.start_date) throw new Error('Finish date must be on or after start date.');
   if (String(raw.review_ack) !== 'yes') throw new Error('Please acknowledge that this is a request for review.');
   if (data.request_id && !/^[A-Za-z0-9_-]{16,100}$/.test(data.request_id)) throw new Error('Please reload the form and try again.');

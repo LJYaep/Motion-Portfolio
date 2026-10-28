@@ -303,12 +303,26 @@ const SITE_CONFIG = Object.freeze({
     const agreementEndpoint = window.LJY_PUBLIC_CONFIG?.agreementEndpoint || "";
     const hasAgreementDelivery = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(agreementEndpoint);
     const dateStart = $("#start-date"), dateEnd = $("#end-date");
-    function validateDates() {
-      dateEnd.min = dateStart.value;
-      dateEnd.setCustomValidity(dateStart.value && dateEnd.value && dateEnd.value < dateStart.value ? "Finish date must be on or after the start date." : "");
+    function singaporeToday(now = new Date()) {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Singapore", year: "numeric", month: "2-digit", day: "2-digit"
+      }).formatToParts(now);
+      const value = type => parts.find(part => part.type === type).value;
+      return `${value("year")}-${value("month")}-${value("day")}`;
     }
+    function validateDates() {
+      const today = singaporeToday();
+      dateStart.min = today;
+      dateStart.setCustomValidity(dateStart.value && dateStart.value < today ? "Start date must be today or later (Singapore time)." : "");
+      dateEnd.min = dateStart.value && dateStart.value > today ? dateStart.value : today;
+      dateEnd.setCustomValidity(dateEnd.value && dateEnd.value < dateEnd.min ? "Finish date must be today or later and on or after the start date." : "");
+    }
+    validateDates();
     dateStart.addEventListener("change", validateDates);
     dateEnd.addEventListener("change", validateDates);
+    form.addEventListener("focusin", validateDates);
+    window.addEventListener("pageshow", validateDates);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) validateDates(); });
     const payment = $("#payment-method"), amount = $("#budget"), currency = $("#budget-currency");
     function updatePayment() {
       const robux = payment.value === "robux";
