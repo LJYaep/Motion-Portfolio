@@ -396,3 +396,11 @@ body:not(.motion-enabled) .art-core, body:not(.motion-enabled) .art-orbit, body:
   .project-grid { grid-template-columns: 1fr 1fr; }
   .section, .service-row, .project-card { break-inside: avoid; }
 }
+
+/* Logo-inspired shooting star: the line is drawn once behind the travelling star. */
+.hero-orbit.orbit-drawn { border: 0; }
+.hero-orbit.orbit-drawn svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.orbit-drawn path { fill: none; stroke: var(--blue); stroke-width: 2; }
+.orbit-drawn .orbit-line { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.orbit-drawn .orbit-highlight { stroke: #71a6ff; stroke-width: 4; stroke-linecap: round; stroke-dasharray: .055 .945; opacity: 0; }
+.hero-orbit.orbit-drawn span { z-index: 1; left: 95%; right: auto; top: 28.206%; transform: translate(-50%, -50%); }

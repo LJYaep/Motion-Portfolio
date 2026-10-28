@@ -449,6 +449,52 @@ const SITE_CONFIG = Object.freeze({
   if (window.addEventListener && document.documentElement) {
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
     const heroOrbit = $(".hero-orbit");
+    let orbitLine, orbitHighlight;
+    const orbitStar = heroOrbit?.querySelector("span");
+    if (heroOrbit && orbitStar && document.createElementNS) {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("viewBox", "0 0 1000 400");
+      svg.setAttribute("preserveAspectRatio", "none");
+      svg.setAttribute("aria-hidden", "true");
+      const path = "M 950 112.822 A 500 200 0 1 1 50 287.178 A 500 200 0 1 1 950 112.822";
+      ["orbit-line", "orbit-highlight"].forEach(className => {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        line.setAttribute("d", path);
+        line.setAttribute("pathLength", "1");
+        line.setAttribute("class", className);
+        line.setAttribute("vector-effect", "non-scaling-stroke");
+        svg.appendChild(line);
+        if (className === "orbit-line") orbitLine = line;
+        else orbitHighlight = line;
+      });
+      heroOrbit.appendChild(svg);
+      heroOrbit.classList.add("orbit-drawn");
+    }
+    function playOrbitEntrance() {
+      if (!motionEnabled || !orbitLine) return;
+      const timing = { duration: 1750, delay: 180, easing: "cubic-bezier(.35,0,.15,1)", fill: "backwards" };
+      const pathLength = orbitLine.getTotalLength?.();
+      const starFrames = Array.from({ length: 97 }, (_, index) => {
+        const progress = index / 96;
+        const angle = -Math.acos(.9) + Math.PI * 2 * progress;
+        const point = pathLength ? orbitLine.getPointAtLength(pathLength * progress) : { x: 500 + 500 * Math.cos(angle), y: 200 + 200 * Math.sin(angle) };
+        return {
+          offset: progress,
+          left: `${point.x / 10}%`,
+          top: `${point.y / 4}%`,
+          opacity: Math.min(1, progress * 16),
+          transform: `translate(-50%, -50%) rotate(${-100 * (1 - progress)}deg) scale(${.65 + .35 * Math.min(1, progress * 6)})`
+        };
+      });
+      animateElement(orbitStar, starFrames, timing);
+      animateElement(orbitLine, [{ strokeDashoffset: "1" }, { strokeDashoffset: "0" }], timing);
+      animateElement(orbitHighlight, [
+        { strokeDashoffset: ".055", opacity: 0, offset: 0 },
+        { strokeDashoffset: "-.045", opacity: .9, offset: .1 },
+        { strokeDashoffset: "-.745", opacity: .6, offset: .8 },
+        { strokeDashoffset: "-.945", opacity: 0, offset: 1 }
+      ], timing);
+    }
     let savedMotion = "";
     try { savedMotion = window.localStorage.getItem("ljy-motion") || ""; } catch { /* Storage can be unavailable. */ }
     const toggle = document.createElement("button");
@@ -479,6 +525,7 @@ const SITE_CONFIG = Object.freeze({
     });
     preference.addEventListener("change", applyMotion);
     applyMotion();
+    playOrbitEntrance();
     $$(".hero .eyebrow, .hero h1, .hero-side > p, .hero-side .button-group").forEach((element, index) => {
       animateElement(element, [{ opacity: 0, transform: "translateY(26px)" }, { opacity: 1, transform: "translateY(0)" }], { duration: 850, delay: index * 85 });
     });
