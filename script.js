@@ -202,6 +202,17 @@ const SITE_CONFIG = Object.freeze({
   // Navigation remains regular HTML links, including when JavaScript is unavailable.
   const menu = $(".menu-toggle");
   const nav = $("#site-nav");
+  const headerActions = $(".header-actions");
+  const headerContact = headerActions?.querySelector(".nav-contact");
+  const compactHeader = window.matchMedia("(max-width: 700px)");
+  function positionHeaderActions() {
+    if (!headerContact || !headerActions || !nav) return;
+    if (compactHeader.matches) nav.appendChild(headerContact);
+    else headerActions.prepend(headerContact);
+  }
+  compactHeader.addEventListener("change",positionHeaderActions);
+  positionHeaderActions();
+
   function closeMenu() {
     nav?.classList.remove("is-open");
     menu?.setAttribute("aria-expanded", "false");
@@ -950,7 +961,7 @@ function validContactEmail(value) {
     toggle.type = "button";
     toggle.className = "motion-toggle";
     toggle.setAttribute("aria-label", "Enable website animations");
-    $(".site-header")?.appendChild(toggle);
+    ($(".header-actions") || $(".site-header"))?.appendChild(toggle);
     const progress = document.createElement("div");
     progress.className = "reading-progress";
     progress.setAttribute("aria-hidden", "true");
