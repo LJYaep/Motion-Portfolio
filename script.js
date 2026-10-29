@@ -150,9 +150,31 @@ const SITE_CONFIG = Object.freeze({
     player.setAttribute("draggable", "false");
     return player;
   }
+
+  // Decorative playback follows the site's motion setting and pauses off screen.
+  const backgroundMount = $("#hero-background-player");
+  let heroInView = true;
+  function syncHeroBackground() {
+    if (!backgroundMount) return;
+    const foreground = $("#project-dialog")?.open;
+    const play = motionEnabled && !document.hidden && heroInView && !foreground && canEmbedYouTube;
+    if (!play) { backgroundMount.replaceChildren(); return; }
+    if (backgroundMount.firstChild) return;
+    const frame = youtubePlayer("sfqSV6F9NKE", "Muted looping showreel background", true);
+    const url = new URL(frame.src);
+    Object.entries({mute:"1",controls:"0",loop:"1",playlist:"sfqSV6F9NKE",disablekb:"1",fs:"0"}).forEach(([key,value])=>url.searchParams.set(key,value));
+    frame.src=url.href; frame.tabIndex=-1; frame.setAttribute("aria-hidden","true");
+    frame.removeAttribute("allowfullscreen");
+    backgroundMount.appendChild(frame);
+  }
+  document.addEventListener("visibilitychange",syncHeroBackground);
+  if (backgroundMount && "IntersectionObserver" in window) {
+    new IntersectionObserver(entries=>{ heroInView=entries[0].isIntersecting; syncHeroBackground(); },{threshold:0.05}).observe($(".hero--cinematic"));
+  }
+
   const showreelMount = $("#showreel-mount");
   if (showreelMount && canEmbedYouTube) {
-    const player = youtubePlayer(showreelMount.dataset.showreel, "LJY showreel 2026 — video editing and motion design");
+    const player = youtubePlayer(showreelMount.dataset.showreel, "LJY showreel 2026 · video editing and motion design");
     if (player) {
       player.setAttribute("id", "showreel-player");
       showreelMount.replaceChildren(player);
@@ -248,6 +270,7 @@ const SITE_CONFIG = Object.freeze({
     player.setAttribute("id", "project-player");
     $("#dialog-art").replaceChildren(player);
     dialog.showModal();
+    syncHeroBackground();
     animateElement(dialog, [{ opacity: 0, transform: "translateY(16px) scale(.98)" }, { opacity: 1, transform: "translateY(0) scale(1)" }], { duration: 320 });
     monitorPlayer(player, $("#dialog-feedback"));
     document.body.classList.add("modal-open");
@@ -263,6 +286,7 @@ const SITE_CONFIG = Object.freeze({
     $("#dialog-art").replaceChildren();
     document.body.classList.remove("modal-open");
     lastProjectLink?.focus();
+    syncHeroBackground();
   });
 
   // Thumbnails are bundled locally; the underlying graphic remains a fallback.
@@ -412,7 +436,7 @@ function validContactEmail(value) {
       const button=document.createElement("button"); button.type="button"; button.className="date-open-button";
       button.innerHTML='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg>';
       button.setAttribute("aria-haspopup","dialog"); button.setAttribute("aria-controls",dialog.id); button.setAttribute("aria-expanded","false");
-      const hint=document.createElement("span"); hint.className="meta date-format-hint"; hint.id=original.id+"-format"; hint.textContent="Day / month / year — type a date or open the calendar.";
+      const hint=document.createElement("span"); hint.className="meta date-format-hint"; hint.id=original.id+"-format"; hint.textContent="Day / month / year · type a date or open the calendar.";
       const error=document.createElement("span"); error.className="date-field-error"; error.id=original.id+"-error"; error.hidden=true; error.setAttribute("aria-live","polite");
       let parseError="", rangeError="", touched=false;
       function validity() {
@@ -557,7 +581,7 @@ function validContactEmail(value) {
       submit.disabled = true;
       submit.textContent = "Connecting…";
       const labels = {name:"Client name",client_group:"Company / group",email:"Email",service:"Project type",preferred_contact:"Preferred reply",contact_handle:"Social username",payment_method:"Payment preference",payment_channel:"Payment method",currency:"Currency",budget:"Proposed budget",start_date:"Requested start",end_date:"Requested finish",device_target:"Device requirements",message:"Project details"};
-      const lines = ["LJY — Project request (delivery not confirmed)", ""];
+      const lines = ["LJY · Project request (delivery not confirmed)", ""];
       Object.entries(labels).forEach(([name, label]) => {
         const field = form.elements.namedItem(name);
         if (!field || field.disabled) return;
@@ -664,10 +688,10 @@ function validContactEmail(value) {
         return;
       }
       const service = $("#service").selectedOptions[0].textContent;
-      messageText = ["LJY — Project enquiry", "", `Name: ${data.name}`, `Email: ${data.email}`, `Service: ${service}`, `Budget: ${data.budget || "To be discussed"}`, `Timeline: ${data.timeline || "To be discussed"}`, `Preferred reply: ${data.preferred_contact}`, `Social handle: ${data.contact_handle || "Not supplied"}`, "", "Project details", data.message].join("\n");
+      messageText = ["LJY · Project enquiry", "", `Name: ${data.name}`, `Email: ${data.email}`, `Service: ${service}`, `Budget: ${data.budget || "To be discussed"}`, `Timeline: ${data.timeline || "To be discussed"}`, `Preferred reply: ${data.preferred_contact}`, `Social handle: ${data.contact_handle || "Not supplied"}`, "", "Project details", data.message].join("\n");
       $("#enquiry-preview").value = messageText;
       const mailLink = $("#email-enquiry");
-      mailLink.href = `mailto:${SITE_CONFIG.emailRecipients.join(",")}?subject=${encodeURIComponent("Project enquiry — " + service)}&body=${encodeURIComponent(messageText)}`;
+      mailLink.href = `mailto:${SITE_CONFIG.emailRecipients.join(",")}?subject=${encodeURIComponent("Project enquiry · " + service)}&body=${encodeURIComponent(messageText)}`;
       mailLink.hidden = false;
       if (!SITE_CONFIG.enquiryEndpoint) {
         status.hidden = false;
@@ -822,6 +846,7 @@ function validContactEmail(value) {
       toggle.textContent = preference.matches ? "Motion reduced" : motionEnabled ? "Motion on" : "Motion off";
       toggle.setAttribute("aria-pressed", String(motionEnabled));
       toggle.disabled = preference.matches;
+      syncHeroBackground();
       toggle.title = preference.matches ? "Reduced motion is enabled in your device settings" : "Turn website animations on or off";
       if (!motionEnabled) {
         motionAnimations.forEach(animation => animation.cancel());
