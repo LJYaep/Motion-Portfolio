@@ -808,3 +808,13 @@ body[data-page="contact"] .contact-grid { display: flex; flex-direction: column;
   .site-header .site-nav { gap: 6px; }
   .site-header .site-nav > a:not(.button) { justify-content: flex-start; }
 }
+
+/* The contact action lives outside the centred navigation on desktop. */
+.site-header .header-actions .nav-contact { color: var(--ink); border-color: var(--line); background: transparent; }
+.site-header .header-actions .nav-contact:is(:hover,:focus-visible,[aria-current="page"]) {
+  color: var(--blue); border-color: var(--blue); background: #0754f80a;
+}
+.site-header.is-over-hero .header-actions .nav-contact { color: white; border-color: #ffffff85; background: transparent; }
+.site-header.is-over-hero .header-actions .nav-contact:is(:hover,:focus-visible,[aria-current="page"]) {
+  color: white; border-color: #ffffffc4; background: #ffffff0f;
+}
