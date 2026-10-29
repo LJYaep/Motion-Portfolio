@@ -54,3 +54,18 @@ assert.equal(motionRequest.device_target,'');
 assert(!ctx.draftFields_(motionRequest).PROJECT_DETAILS.includes('Device requirements:'));
 assert(ctx.draftFields_(data).PROJECT_DETAILS.includes('Device requirements: mobile'));
 console.log('PASS: motion requests omit Roblox device requirements; Roblox requests retain them.');
+
+const protection={TURNSTILE_SECRET_KEY:'test-only-secret',TURNSTILE_HOSTNAMES:'ljyaep.github.io'};
+assert.throws(()=>ctx.verifyTurnstile_({},protection),/complete the security check/);
+ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify({success:false})});
+assert.throws(()=>ctx.verifyTurnstile_({'cf-turnstile-response':'test-token'},protection));
+for (const response of [{success:true,hostname:'other.example',action:'project_request'},{success:true,hostname:'ljyaep.github.io',action:'other'}]) {
+ ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify(response)});
+ assert.throws(()=>ctx.verifyTurnstile_({'cf-turnstile-response':'test-token'},protection));
+}
+ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>200,getContentText:()=>JSON.stringify({success:true,hostname:'ljyaep.github.io',action:'project_request'})});
+assert.doesNotThrow(()=>ctx.verifyTurnstile_({'cf-turnstile-response':'test-token'},protection));
+ctx.UrlFetchApp.fetch=()=>({getResponseCode:()=>503});
+assert.throws(()=>ctx.verifyTurnstile_({'cf-turnstile-response':'test-token'},protection),/temporarily unavailable/);
+ctx.UrlFetchApp.fetch=dnsFetch;
+console.log('PASS: Turnstile missing/invalid token, hostname/action checks, success and fail-closed provider outage. Siteverify transport mocked.');

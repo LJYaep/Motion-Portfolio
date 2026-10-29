@@ -150,9 +150,31 @@ const SITE_CONFIG = Object.freeze({
     player.setAttribute("draggable", "false");
     return player;
   }
+
+  // Decorative playback follows the site's motion setting and pauses off screen.
+  const backgroundMount = $("#hero-background-player");
+  let heroInView = true;
+  function syncHeroBackground() {
+    if (!backgroundMount) return;
+    const foreground = $("#project-dialog")?.open;
+    const play = motionEnabled && !document.hidden && heroInView && !foreground && canEmbedYouTube;
+    if (!play) { backgroundMount.replaceChildren(); return; }
+    if (backgroundMount.firstChild) return;
+    const frame = youtubePlayer("sfqSV6F9NKE", "Muted looping showreel background", true);
+    const url = new URL(frame.src);
+    Object.entries({mute:"1",controls:"0",loop:"1",playlist:"sfqSV6F9NKE",disablekb:"1",fs:"0"}).forEach(([key,value])=>url.searchParams.set(key,value));
+    frame.src=url.href; frame.tabIndex=-1; frame.setAttribute("aria-hidden","true");
+    frame.removeAttribute("allowfullscreen");
+    backgroundMount.appendChild(frame);
+  }
+  document.addEventListener("visibilitychange",syncHeroBackground);
+  if (backgroundMount && "IntersectionObserver" in window) {
+    new IntersectionObserver(entries=>{ heroInView=entries[0].isIntersecting; syncHeroBackground(); },{threshold:0.05}).observe($(".hero--cinematic"));
+  }
+
   const showreelMount = $("#showreel-mount");
   if (showreelMount && canEmbedYouTube) {
-    const player = youtubePlayer(showreelMount.dataset.showreel, "LJY showreel 2026 — video editing and motion design");
+    const player = youtubePlayer(showreelMount.dataset.showreel, "LJY showreel 2026 · video editing and motion design");
     if (player) {
       player.setAttribute("id", "showreel-player");
       showreelMount.replaceChildren(player);
@@ -160,9 +182,37 @@ const SITE_CONFIG = Object.freeze({
     }
   }
 
+
+  const fixedHeader = $(".site-header");
+  const fullHero = $(".hero--cinematic");
+  function updateHeaderContrast() {
+    if (!fixedHeader || !fullHero) return;
+    const heroRect = fullHero.getBoundingClientRect();
+    fixedHeader.classList.toggle("is-over-hero", heroRect.bottom > fixedHeader.getBoundingClientRect().height && heroRect.top <= 0);
+  }
+  let headerFrame = 0;
+  window.addEventListener("scroll", () => {
+    if (headerFrame) return;
+    headerFrame = requestAnimationFrame(() => { headerFrame = 0; updateHeaderContrast(); });
+  }, {passive:true});
+  window.addEventListener("resize", updateHeaderContrast);
+  window.addEventListener("pageshow", updateHeaderContrast);
+  updateHeaderContrast();
+
   // Navigation remains regular HTML links, including when JavaScript is unavailable.
   const menu = $(".menu-toggle");
   const nav = $("#site-nav");
+  const headerActions = $(".header-actions");
+  const headerContact = headerActions?.querySelector(".nav-contact");
+  const compactHeader = window.matchMedia("(max-width: 700px)");
+  function positionHeaderActions() {
+    if (!headerContact || !headerActions || !nav) return;
+    if (compactHeader.matches) nav.appendChild(headerContact);
+    else headerActions.prepend(headerContact);
+  }
+  compactHeader.addEventListener("change",positionHeaderActions);
+  positionHeaderActions();
+
   function closeMenu() {
     nav?.classList.remove("is-open");
     menu?.setAttribute("aria-expanded", "false");
@@ -248,6 +298,7 @@ const SITE_CONFIG = Object.freeze({
     player.setAttribute("id", "project-player");
     $("#dialog-art").replaceChildren(player);
     dialog.showModal();
+    syncHeroBackground();
     animateElement(dialog, [{ opacity: 0, transform: "translateY(16px) scale(.98)" }, { opacity: 1, transform: "translateY(0) scale(1)" }], { duration: 320 });
     monitorPlayer(player, $("#dialog-feedback"));
     document.body.classList.add("modal-open");
@@ -263,6 +314,7 @@ const SITE_CONFIG = Object.freeze({
     $("#dialog-art").replaceChildren();
     document.body.classList.remove("modal-open");
     lastProjectLink?.focus();
+    syncHeroBackground();
   });
 
   // Thumbnails are bundled locally; the underlying graphic remains a fallback.
@@ -412,7 +464,7 @@ function validContactEmail(value) {
       const button=document.createElement("button"); button.type="button"; button.className="date-open-button";
       button.innerHTML='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg>';
       button.setAttribute("aria-haspopup","dialog"); button.setAttribute("aria-controls",dialog.id); button.setAttribute("aria-expanded","false");
-      const hint=document.createElement("span"); hint.className="meta date-format-hint"; hint.id=original.id+"-format"; hint.textContent="Day / month / year — type a date or open the calendar.";
+      const hint=document.createElement("span"); hint.className="meta date-format-hint"; hint.id=original.id+"-format"; hint.textContent="DD/MM/YYYY · Singapore time.";
       const error=document.createElement("span"); error.className="date-field-error"; error.id=original.id+"-error"; error.hidden=true; error.setAttribute("aria-live","polite");
       let parseError="", rangeError="", touched=false;
       function validity() {
@@ -460,6 +512,104 @@ function validContactEmail(value) {
 
   const form = $("#enquiry-form");
   if (form) {
+
+
+    // Reading acknowledgement is session-only and never checked automatically.
+    const termsPanel = $("#request-terms");
+    if (termsPanel && window.HTMLDialogElement?.prototype.showModal) {
+      const trigger = $("summary",termsPanel), acknowledgement = $("#review-ack"), submitButton = $("#submit-enquiry");
+      const termsDialog = document.createElement("dialog");
+      termsDialog.id = "request-terms-dialog"; termsDialog.className = "request-terms-dialog";
+      termsDialog.setAttribute("aria-labelledby","request-terms-title");
+      termsDialog.innerHTML = '<div class="request-terms-top"><h2 id="request-terms-title">Terms &amp; service</h2><button type="button" aria-label="Close terms">×</button></div>';
+      const content = $("#request-terms-content");
+      content.tabIndex = 0; content.setAttribute("role","region"); content.setAttribute("aria-labelledby","request-terms-title");
+      termsDialog.appendChild(content);
+      const footer = document.createElement("div"); footer.className = "request-terms-footer";
+      footer.innerHTML = '<p id="terms-read-status" role="status" aria-live="polite">Scroll to the end to enable agreement.</p><button class="button button--primary" type="button" id="agree-terms" disabled>I’ve read and agree</button>';
+      termsDialog.appendChild(footer); document.body.appendChild(termsDialog);
+      const agree = $("#agree-terms"), readStatus = $("#terms-read-status");
+      let accepted = false, reachedEnd = false;
+      acknowledgement.checked = false; acknowledgement.disabled = true; submitButton.disabled = true;
+      const hint = document.createElement("p"); hint.className = "terms-required-hint"; hint.id = "terms-required-hint";
+      hint.textContent = "Read and agree to the terms before submitting.";
+      termsPanel.after(hint);
+      acknowledgement.setAttribute("aria-describedby",hint.id);
+      termsPanel.classList.add("is-dialog-trigger");
+      trigger.setAttribute("aria-haspopup","dialog"); trigger.setAttribute("aria-controls",termsDialog.id); trigger.setAttribute("aria-expanded","false");
+      function checkReadPosition() {
+        if (!termsDialog.open || content.clientHeight <= 0) return;
+        if (content.scrollTop + content.clientHeight >= content.scrollHeight - 4) reachedEnd = true;
+        agree.disabled = !reachedEnd;
+        if (reachedEnd) readStatus.textContent = "You can now agree to the terms.";
+      }
+      function openTerms() {
+        trigger.setAttribute("aria-expanded","true"); termsDialog.showModal();
+        if (!accepted) content.scrollTop = 0;
+        content.focus(); requestAnimationFrame(checkReadPosition);
+      }
+      trigger.addEventListener("click",event=>{event.preventDefault();openTerms();});
+      content.addEventListener("scroll",checkReadPosition,{passive:true});
+      if ("ResizeObserver" in window) new ResizeObserver(checkReadPosition).observe(content);
+      agree.addEventListener("click",()=>{
+        checkReadPosition(); if (!reachedEnd) return;
+        accepted = true; acknowledgement.disabled = false; acknowledgement.checked = true;
+        submitButton.disabled = false; hint.textContent = "Terms acknowledged. You can review them again at any time.";
+        acknowledgement.dispatchEvent(new Event("input",{bubbles:true}));
+        termsDialog.close();
+      });
+      acknowledgement.addEventListener("change",()=>{submitButton.disabled = !accepted || !acknowledgement.checked;});
+      form.addEventListener("submit",event=>{
+        if (!accepted || !acknowledgement.checked) {event.preventDefault();event.stopImmediatePropagation();openTerms();}
+      },true);
+      $(".request-terms-top button",termsDialog).addEventListener("click",()=>termsDialog.close());
+      termsDialog.addEventListener("close",()=>{trigger.setAttribute("aria-expanded","false");trigger.focus();});
+    }
+    form.addEventListener("invalid",event=>{
+      const collapsed=event.target.closest("details");
+      if(collapsed) collapsed.open=true;
+    },true);
+
+
+    const turnstileSitekey = (form.dataset.turnstileSitekey || "").trim();
+    if (turnstileSitekey) {
+      let verificationToken = "", verificationWidget;
+      const section = document.createElement("div"); section.className = "request-security";
+      const label = document.createElement("p"); label.textContent = "Security check";
+      const mount = document.createElement("div"); mount.id = "request-turnstile";
+      const feedback = document.createElement("p"); feedback.className = "meta"; feedback.setAttribute("role","status");
+      const tokenInput = document.createElement("input"); tokenInput.type="hidden"; tokenInput.name="cf-turnstile-response";
+      section.append(label,mount,feedback,tokenInput); $("#request-terms").before(section);
+      function clearVerification(message) {verificationToken="";tokenInput.value="";feedback.textContent=message;}
+      function renderVerification() {
+        if (!window.turnstile) {clearVerification("Security check could not load. Refresh the page to try again.");return;}
+        verificationWidget = window.turnstile.render(mount,{
+          sitekey:turnstileSitekey,action:"project_request",size:window.matchMedia("(max-width: 360px)").matches ? "compact" : "flexible",theme:"light","response-field":false,
+          callback:token=>{verificationToken=token;tokenInput.value=token;feedback.textContent="Verification complete.";},
+          "expired-callback":()=>clearVerification("Verification expired. Please complete the security check again."),
+          "error-callback":()=>{clearVerification("Security check is unavailable. Please retry the check or refresh the page.");return true;},
+          "timeout-callback":()=>clearVerification("Security check timed out. Please try again.")
+        });
+      }
+      if (window.turnstile) renderVerification();
+      else {
+        const loader=document.createElement("script");loader.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        loader.async=true;loader.defer=true;loader.onload=renderVerification;
+        loader.onerror=()=>clearVerification("Security check could not load. Check your connection and refresh the page.");
+        document.head.appendChild(loader);
+      }
+      form.addEventListener("submit",event=>{
+        if (!verificationToken) {
+          event.preventDefault();event.stopImmediatePropagation();
+          feedback.textContent="Complete the security check before submitting.";
+          section.scrollIntoView({block:"center",behavior:"auto"});mount.tabIndex=-1;mount.focus();
+        }
+      },true);
+      window.addEventListener("pageshow",event=>{
+        if(event.persisted && window.turnstile){clearVerification("Please complete a fresh security check.");window.turnstile.reset(verificationWidget);}
+      });
+    }
+
     let serviceParam = new URLSearchParams(window.location.search).get("service");
     if (["animation", "editing"].includes(serviceParam)) serviceParam = "motion";
     if (serviceParam === "both") serviceParam = "discuss";
@@ -507,10 +657,10 @@ function validContactEmail(value) {
       amount.step = robux ? "1" : "0.01";
       const type = $("#service").value;
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
-      $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to Discuss First. Whole numbers only. The Robux minimums below apply; the final price is confirmed after review." : "Enter an amount, or leave blank to Discuss First. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
+      $("#budget-hint").textContent = robux ? "Whole numbers only. Leave blank to Discuss First." : "Leave blank to Discuss First. Final price is confirmed in SGD.";
     }
     function updateDeviceRequirements() {
-      const irrelevant = $("#service").value === "motion";
+      const irrelevant = !["roblox", "modelling"].includes($("#service").value);
       $("#device-target-field").hidden = irrelevant;
       $("#device-target").disabled = irrelevant;
       if (irrelevant) $("#device-target").removeAttribute("name");
@@ -557,7 +707,7 @@ function validContactEmail(value) {
       submit.disabled = true;
       submit.textContent = "Connecting…";
       const labels = {name:"Client name",client_group:"Company / group",email:"Email",service:"Project type",preferred_contact:"Preferred reply",contact_handle:"Social username",payment_method:"Payment preference",payment_channel:"Payment method",currency:"Currency",budget:"Proposed budget",start_date:"Requested start",end_date:"Requested finish",device_target:"Device requirements",message:"Project details"};
-      const lines = ["LJY — Project request (delivery not confirmed)", ""];
+      const lines = ["LJY · Project request (delivery not confirmed)", ""];
       Object.entries(labels).forEach(([name, label]) => {
         const field = form.elements.namedItem(name);
         if (!field || field.disabled) return;
@@ -664,10 +814,10 @@ function validContactEmail(value) {
         return;
       }
       const service = $("#service").selectedOptions[0].textContent;
-      messageText = ["LJY — Project enquiry", "", `Name: ${data.name}`, `Email: ${data.email}`, `Service: ${service}`, `Budget: ${data.budget || "To be discussed"}`, `Timeline: ${data.timeline || "To be discussed"}`, `Preferred reply: ${data.preferred_contact}`, `Social handle: ${data.contact_handle || "Not supplied"}`, "", "Project details", data.message].join("\n");
+      messageText = ["LJY · Project enquiry", "", `Name: ${data.name}`, `Email: ${data.email}`, `Service: ${service}`, `Budget: ${data.budget || "To be discussed"}`, `Timeline: ${data.timeline || "To be discussed"}`, `Preferred reply: ${data.preferred_contact}`, `Social handle: ${data.contact_handle || "Not supplied"}`, "", "Project details", data.message].join("\n");
       $("#enquiry-preview").value = messageText;
       const mailLink = $("#email-enquiry");
-      mailLink.href = `mailto:${SITE_CONFIG.emailRecipients.join(",")}?subject=${encodeURIComponent("Project enquiry — " + service)}&body=${encodeURIComponent(messageText)}`;
+      mailLink.href = `mailto:${SITE_CONFIG.emailRecipients.join(",")}?subject=${encodeURIComponent("Project enquiry · " + service)}&body=${encodeURIComponent(messageText)}`;
       mailLink.hidden = false;
       if (!SITE_CONFIG.enquiryEndpoint) {
         status.hidden = false;
@@ -811,7 +961,7 @@ function validContactEmail(value) {
     toggle.type = "button";
     toggle.className = "motion-toggle";
     toggle.setAttribute("aria-label", "Enable website animations");
-    $(".site-header")?.appendChild(toggle);
+    ($(".header-actions") || $(".site-header"))?.appendChild(toggle);
     const progress = document.createElement("div");
     progress.className = "reading-progress";
     progress.setAttribute("aria-hidden", "true");
@@ -822,6 +972,7 @@ function validContactEmail(value) {
       toggle.textContent = preference.matches ? "Motion reduced" : motionEnabled ? "Motion on" : "Motion off";
       toggle.setAttribute("aria-pressed", String(motionEnabled));
       toggle.disabled = preference.matches;
+      syncHeroBackground();
       toggle.title = preference.matches ? "Reduced motion is enabled in your device settings" : "Turn website animations on or off";
       if (!motionEnabled) {
         motionAnimations.forEach(animation => animation.cancel());
