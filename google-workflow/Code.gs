@@ -134,6 +134,8 @@ function sendOwnerDraft_(data, id, attachments) {
 function publicValidationMessage_(error) {
   const message = String(error.message || '');
   const allowed = [
+    'Please complete the security check and try again.',
+    'Security verification is temporarily unavailable. Please try again.',
     'Please check your email and project type.',
     'Please choose a payment option.',
     'Please provide your preferred contact details.',
@@ -161,14 +163,42 @@ function outcome_(ok, reference, validationMessage) {
   return HtmlService.createHtmlOutput('<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>LJY project request</title></head><body style="font:18px/1.6 Arial;padding:48px;max-width:680px;margin:auto;color:#071630;background:#f4f8ff"><h1>' + (ok ? 'Request received for review' : 'Request not confirmed') + '</h1><p>' + (ok ? 'Your project request has been received. Dani will review the details and send you the agreement separately. Proposed dates and prices are not yet confirmed.' : 'Your request could not be confirmed. Please contact Dani directly and quote the reference below. Do not assume that an agreement has been prepared.') + '</p>' + (detail ? '<p><strong>Please correct:</strong> ' + detail + '</p>' : '') + '<p>Reference: ' + reference + '</p><a href="' + SITE_URL + '" target="_top">Return to LJY</a></body></html>').setTitle('LJY project request');
 }
 function doGet() { return outcome_(false,'Use the enquiry form to submit a new request.'); }
+
+function verifyTurnstile_(raw, config) {
+  // Siteverify is the authority. Never trust the browser's success callback alone.
+  const secret = config.TURNSTILE_SECRET_KEY;
+  if (!secret) return; // Pending setup; do not claim protection until configured.
+  const token = String(raw['cf-turnstile-response'] || '').trim();
+  if (!token || token.length > 2048) throw new Error('Please complete the security check and try again.');
+  let response, result;
+  try {
+    const hash = digest_(String(raw.request_id || '') + token);
+    const retryId = hash.slice(0,8)+'-'+hash.slice(8,12)+'-4'+hash.slice(13,16)+'-8'+hash.slice(17,20)+'-'+hash.slice(20,32);
+    response = UrlFetchApp.fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify',{
+      method:'post',payload:{secret:secret,response:token,idempotency_key:retryId},muteHttpExceptions:true
+    });
+    if (response.getResponseCode() !== 200) throw new Error('Verification unavailable.');
+    result = JSON.parse(response.getContentText());
+  } catch (_) { throw new Error('Security verification is temporarily unavailable. Please try again.'); }
+  const allowed = String(config.TURNSTILE_HOSTNAMES || 'ljyaep.github.io').split(',').map(name=>name.trim().toLowerCase());
+  if (result.success !== true || !allowed.includes(String(result.hostname || '').toLowerCase()) || result.action !== 'project_request') {
+    throw new Error('Please complete the security check and try again.');
+  }
+}
+
 function doPost(event) {
   let reference = 'not-accepted';
-  const lock = LockService.getScriptLock();
-  if (!lock.tryLock(15000)) return outcome_(false,'busy-please-retry');
+  let lock, locked = false;
   try {
     if (!event || event.contentLength > 18000) throw new Error('Request is too large.');
     const data = validateRequest_(event.parameter || {}); reference = data.request_id;
-    const props = PropertiesService.getScriptProperties(), config = props.getProperties();
+    const props = PropertiesService.getScriptProperties();
+    let config = props.getProperties();
+    verifyTurnstile_(event.parameter || {},config);
+    lock = LockService.getScriptLock();
+    if (!lock.tryLock(1000)) return outcome_(false,'busy-please-retry');
+    locked = true;
+    config = props.getProperties();
     if (!config.TEMPLATE_ID || !config.OUTPUT_FOLDER_ID) throw new Error('Private template is not configured.');
     const key = 'request_' + reference, signature = digest_(JSON.stringify(data));
     let record = config[key] ? JSON.parse(config[key]) : null;
@@ -204,7 +234,7 @@ function doPost(event) {
   } catch (error) {
     console.error('Agreement request failed: ' + String(error.message).slice(0,180));
     return outcome_(false,reference,publicValidationMessage_(error));
-  } finally { lock.releaseLock(); }
+  } finally { if (locked) lock.releaseLock(); }
 }
 function checkSetup() {
   const config = PropertiesService.getScriptProperties().getProperties();

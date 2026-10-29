@@ -730,3 +730,17 @@ body[data-page="contact"] .contact-grid { display: flex; flex-direction: column;
 .date-dialog-actions button,
 .request-terms > summary, .request-terms-dialog, .request-terms-top button,
 .local-presence { border-radius: 0; }
+
+/* Terms remain keyboard-scrollable; explicit agreement unlocks submission. */
+.request-terms-dialog[open] { display: flex; flex-direction: column; overflow: hidden; }
+.request-terms-dialog .request-terms-top { flex: 0 0 auto; margin-bottom: 16px; }
+.request-terms-dialog #request-terms-content { min-height: 0; max-height: min(56dvh,560px); overflow-y: auto; padding: 4px 12px 4px 4px; overscroll-behavior: contain; }
+.request-terms-dialog #request-terms-content:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.request-terms-footer { flex: 0 0 auto; padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--line); }
+.request-terms-footer p, .terms-required-hint { font: 12px/1.6 var(--sans); color: var(--muted); }
+.request-terms-footer .button { margin-top: 10px; border-radius: 0; }
+.terms-required-hint { margin-top: 8px; }
+@media (max-height:500px) { .request-terms-dialog { max-height: calc(100dvh - 16px); padding: 12px; } .request-terms-dialog #request-terms-content { max-height: 40dvh; } }
+
+.request-security { margin-top: 20px; display: grid; gap: 8px; }
+.request-security > p:first-child { font: 600 13px/1.5 var(--sans); }

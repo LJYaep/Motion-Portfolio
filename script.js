@@ -502,30 +502,102 @@ function validContactEmail(value) {
   const form = $("#enquiry-form");
   if (form) {
 
-    // Native details is the fallback; supporting browsers present the same notes in a dialog.
+
+    // Reading acknowledgement is session-only and never checked automatically.
     const termsPanel = $("#request-terms");
     if (termsPanel && window.HTMLDialogElement?.prototype.showModal) {
-      const trigger = $("summary",termsPanel);
+      const trigger = $("summary",termsPanel), acknowledgement = $("#review-ack"), submitButton = $("#submit-enquiry");
       const termsDialog = document.createElement("dialog");
       termsDialog.id = "request-terms-dialog"; termsDialog.className = "request-terms-dialog";
       termsDialog.setAttribute("aria-labelledby","request-terms-title");
       termsDialog.innerHTML = '<div class="request-terms-top"><h2 id="request-terms-title">Terms &amp; service</h2><button type="button" aria-label="Close terms">×</button></div>';
-      termsDialog.appendChild($("#request-terms-content"));
-      document.body.appendChild(termsDialog);
+      const content = $("#request-terms-content");
+      content.tabIndex = 0; content.setAttribute("role","region"); content.setAttribute("aria-labelledby","request-terms-title");
+      termsDialog.appendChild(content);
+      const footer = document.createElement("div"); footer.className = "request-terms-footer";
+      footer.innerHTML = '<p id="terms-read-status" role="status" aria-live="polite">Scroll to the end to enable agreement.</p><button class="button button--primary" type="button" id="agree-terms" disabled>I’ve read and agree</button>';
+      termsDialog.appendChild(footer); document.body.appendChild(termsDialog);
+      const agree = $("#agree-terms"), readStatus = $("#terms-read-status");
+      let accepted = false, reachedEnd = false;
+      acknowledgement.checked = false; acknowledgement.disabled = true; submitButton.disabled = true;
+      const hint = document.createElement("p"); hint.className = "terms-required-hint"; hint.id = "terms-required-hint";
+      hint.textContent = "Read and agree to the terms before submitting.";
+      termsPanel.after(hint);
+      acknowledgement.setAttribute("aria-describedby",hint.id);
       termsPanel.classList.add("is-dialog-trigger");
-      trigger.setAttribute("aria-haspopup","dialog");
-      trigger.setAttribute("aria-controls",termsDialog.id);
-      trigger.setAttribute("aria-expanded","false");
-      trigger.addEventListener("click",event=>{
-        event.preventDefault(); trigger.setAttribute("aria-expanded","true"); termsDialog.showModal();
+      trigger.setAttribute("aria-haspopup","dialog"); trigger.setAttribute("aria-controls",termsDialog.id); trigger.setAttribute("aria-expanded","false");
+      function checkReadPosition() {
+        if (!termsDialog.open || content.clientHeight <= 0) return;
+        if (content.scrollTop + content.clientHeight >= content.scrollHeight - 4) reachedEnd = true;
+        agree.disabled = !reachedEnd;
+        if (reachedEnd) readStatus.textContent = "You can now agree to the terms.";
+      }
+      function openTerms() {
+        trigger.setAttribute("aria-expanded","true"); termsDialog.showModal();
+        if (!accepted) content.scrollTop = 0;
+        content.focus(); requestAnimationFrame(checkReadPosition);
+      }
+      trigger.addEventListener("click",event=>{event.preventDefault();openTerms();});
+      content.addEventListener("scroll",checkReadPosition,{passive:true});
+      if ("ResizeObserver" in window) new ResizeObserver(checkReadPosition).observe(content);
+      agree.addEventListener("click",()=>{
+        checkReadPosition(); if (!reachedEnd) return;
+        accepted = true; acknowledgement.disabled = false; acknowledgement.checked = true;
+        submitButton.disabled = false; hint.textContent = "Terms acknowledged. You can review them again at any time.";
+        acknowledgement.dispatchEvent(new Event("input",{bubbles:true}));
+        termsDialog.close();
       });
-      $("button",termsDialog).addEventListener("click",()=>termsDialog.close());
-      termsDialog.addEventListener("close",()=>{ trigger.setAttribute("aria-expanded","false"); trigger.focus(); });
+      acknowledgement.addEventListener("change",()=>{submitButton.disabled = !accepted || !acknowledgement.checked;});
+      form.addEventListener("submit",event=>{
+        if (!accepted || !acknowledgement.checked) {event.preventDefault();event.stopImmediatePropagation();openTerms();}
+      },true);
+      $(".request-terms-top button",termsDialog).addEventListener("click",()=>termsDialog.close());
+      termsDialog.addEventListener("close",()=>{trigger.setAttribute("aria-expanded","false");trigger.focus();});
     }
     form.addEventListener("invalid",event=>{
       const collapsed=event.target.closest("details");
       if(collapsed) collapsed.open=true;
     },true);
+
+
+    const turnstileSitekey = (form.dataset.turnstileSitekey || "").trim();
+    if (turnstileSitekey) {
+      let verificationToken = "", verificationWidget;
+      const section = document.createElement("div"); section.className = "request-security";
+      const label = document.createElement("p"); label.textContent = "Security check";
+      const mount = document.createElement("div"); mount.id = "request-turnstile";
+      const feedback = document.createElement("p"); feedback.className = "meta"; feedback.setAttribute("role","status");
+      const tokenInput = document.createElement("input"); tokenInput.type="hidden"; tokenInput.name="cf-turnstile-response";
+      section.append(label,mount,feedback,tokenInput); $("#request-terms").before(section);
+      function clearVerification(message) {verificationToken="";tokenInput.value="";feedback.textContent=message;}
+      function renderVerification() {
+        if (!window.turnstile) {clearVerification("Security check could not load. Refresh the page to try again.");return;}
+        verificationWidget = window.turnstile.render(mount,{
+          sitekey:turnstileSitekey,action:"project_request",size:window.matchMedia("(max-width: 360px)").matches ? "compact" : "flexible",theme:"light","response-field":false,
+          callback:token=>{verificationToken=token;tokenInput.value=token;feedback.textContent="Verification complete.";},
+          "expired-callback":()=>clearVerification("Verification expired. Please complete the security check again."),
+          "error-callback":()=>{clearVerification("Security check is unavailable. Please retry the check or refresh the page.");return true;},
+          "timeout-callback":()=>clearVerification("Security check timed out. Please try again.")
+        });
+      }
+      if (window.turnstile) renderVerification();
+      else {
+        const loader=document.createElement("script");loader.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        loader.async=true;loader.defer=true;loader.onload=renderVerification;
+        loader.onerror=()=>clearVerification("Security check could not load. Check your connection and refresh the page.");
+        document.head.appendChild(loader);
+      }
+      form.addEventListener("submit",event=>{
+        if (!verificationToken) {
+          event.preventDefault();event.stopImmediatePropagation();
+          feedback.textContent="Complete the security check before submitting.";
+          section.scrollIntoView({block:"center",behavior:"auto"});mount.tabIndex=-1;mount.focus();
+        }
+      },true);
+      window.addEventListener("pageshow",event=>{
+        if(event.persisted && window.turnstile){clearVerification("Please complete a fresh security check.");window.turnstile.reset(verificationWidget);}
+      });
+    }
 
     let serviceParam = new URLSearchParams(window.location.search).get("service");
     if (["animation", "editing"].includes(serviceParam)) serviceParam = "motion";
@@ -577,7 +649,7 @@ function validContactEmail(value) {
       $("#budget-hint").textContent = robux ? "Whole numbers only. Leave blank to Discuss First." : "Leave blank to Discuss First. Final price is confirmed in SGD.";
     }
     function updateDeviceRequirements() {
-      const irrelevant = $("#service").value === "motion";
+      const irrelevant = !["roblox", "modelling"].includes($("#service").value);
       $("#device-target-field").hidden = irrelevant;
       $("#device-target").disabled = irrelevant;
       if (irrelevant) $("#device-target").removeAttribute("name");
