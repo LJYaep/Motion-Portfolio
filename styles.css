@@ -818,3 +818,21 @@ body[data-page="contact"] .contact-grid { display: flex; flex-direction: column;
 .site-header.is-over-hero .header-actions .nav-contact:is(:hover,:focus-visible,[aria-current="page"]) {
   color: white; border-color: #ffffffc4; background: #ffffff0f;
 }
+
+/* Keep the contact call to action solid in both header contrast modes. */
+.site-header .header-actions .nav-contact,
+.site-header .site-nav .nav-contact {
+  color: white; background: var(--blue); border-color: var(--blue);
+}
+.site-header .header-actions .nav-contact:is(:hover,:focus-visible,[aria-current="page"]),
+.site-header .site-nav .nav-contact:is(:hover,:focus-visible,[aria-current="page"]) {
+  color: white; background: #0644ca; border-color: #0644ca;
+}
+.site-header.is-over-hero .header-actions .nav-contact,
+.site-header.is-over-hero .site-nav .nav-contact {
+  color: var(--ink); background: white; border-color: white;
+}
+.site-header.is-over-hero .header-actions .nav-contact:is(:hover,:focus-visible,[aria-current="page"]),
+.site-header.is-over-hero .site-nav .nav-contact:is(:hover,:focus-visible,[aria-current="page"]) {
+  color: var(--ink); background: #dfebff; border-color: #dfebff;
+}
