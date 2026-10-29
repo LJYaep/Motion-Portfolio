@@ -519,3 +519,50 @@ body.date-picker-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { .hero-scroll svg { animation: none !important; } }
 
 .site-nav > a:not(.button) { font: 600 14px/1.5 var(--sans); letter-spacing: 0; text-transform: none; }
+
+/* Review refinement: edge-to-edge hero beneath a persistent glass header. */
+:root { --header-height: 104px; }
+html { scroll-padding-top: calc(var(--header-height) + 24px); }
+.site-header {
+  position: fixed; inset: 0 0 auto; z-index: 80; min-height: var(--header-height);
+  margin: 0; padding: 0 var(--gutter); border: 0; isolation: isolate;
+  color: var(--ink); background: transparent;
+}
+.site-header::before {
+  content: ""; position: absolute; inset: 0 0 -36px; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom,#f4f8fff2 0%,#f4f8ffcf 64%,#f4f8ff00 100%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%); backdrop-filter: blur(18px) saturate(135%);
+  -webkit-mask-image: linear-gradient(to bottom,#000 0%,#000 62%,transparent 100%);
+  mask-image: linear-gradient(to bottom,#000 0%,#000 62%,transparent 100%);
+}
+.site-frame > main { padding-top: var(--header-height); }
+body[data-page="home"] .site-frame > main { padding-top: 0; }
+main > section.hero--cinematic {
+  margin: 0; width: 100%; min-height: 100vh; min-height: 100svh;
+  padding-top: calc(var(--header-height) + clamp(32px,6vh,72px)); padding-bottom: 110px;
+}
+.site-header.is-over-hero { color: white; }
+.site-header.is-over-hero::before {
+  background: linear-gradient(to bottom,#071630bd 0%,#07163070 64%,#07163000 100%);
+}
+.site-header.is-over-hero .site-nav > a { color: white; }
+.site-header.is-over-hero .site-nav > a:hover { color: #c4d8ff; }
+.site-header.is-over-hero .site-nav .nav-contact { border-color: #ffffff94; background: #ffffff0d; }
+.site-header.is-over-hero .site-nav .nav-contact:hover { color: var(--ink); background: white; }
+.site-header.is-over-hero .motion-toggle { color: #edf3ff; border-color: #ffffff70; }
+.site-header.is-over-hero .menu-toggle { color: white; border-color: #ffffff94; }
+.site-header.is-over-hero .motion-toggle:focus-visible,
+.site-header.is-over-hero a:focus-visible,
+.site-header.is-over-hero .menu-toggle:focus-visible { outline-color: white; }
+@media (max-width:700px) {
+  :root { --header-height: 83px; }
+  .site-header .site-nav { left: 0; right: 0; top: var(--header-height); }
+  .site-header.is-over-hero .site-nav { background: #0b1c40f5; border-color: #ffffff33; }
+  main > section.hero--cinematic { padding-top: calc(var(--header-height) + 32px); padding-bottom: 110px; }
+}
+@media print {
+  .site-header { position: static; }
+  .site-header::before { display: none; }
+  .site-frame > main { padding-top: 0; }
+  main > section.hero--cinematic { min-height: 0; }
+}

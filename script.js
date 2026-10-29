@@ -182,6 +182,23 @@ const SITE_CONFIG = Object.freeze({
     }
   }
 
+
+  const fixedHeader = $(".site-header");
+  const fullHero = $(".hero--cinematic");
+  function updateHeaderContrast() {
+    if (!fixedHeader || !fullHero) return;
+    const heroRect = fullHero.getBoundingClientRect();
+    fixedHeader.classList.toggle("is-over-hero", heroRect.bottom > fixedHeader.getBoundingClientRect().height && heroRect.top <= 0);
+  }
+  let headerFrame = 0;
+  window.addEventListener("scroll", () => {
+    if (headerFrame) return;
+    headerFrame = requestAnimationFrame(() => { headerFrame = 0; updateHeaderContrast(); });
+  }, {passive:true});
+  window.addEventListener("resize", updateHeaderContrast);
+  window.addEventListener("pageshow", updateHeaderContrast);
+  updateHeaderContrast();
+
   // Navigation remains regular HTML links, including when JavaScript is unavailable.
   const menu = $(".menu-toggle");
   const nav = $("#site-nav");
