@@ -453,7 +453,7 @@ function validContactEmail(value) {
       const button=document.createElement("button"); button.type="button"; button.className="date-open-button";
       button.innerHTML='<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg>';
       button.setAttribute("aria-haspopup","dialog"); button.setAttribute("aria-controls",dialog.id); button.setAttribute("aria-expanded","false");
-      const hint=document.createElement("span"); hint.className="meta date-format-hint"; hint.id=original.id+"-format"; hint.textContent="Day / month / year · type a date or open the calendar.";
+      const hint=document.createElement("span"); hint.className="meta date-format-hint"; hint.id=original.id+"-format"; hint.textContent="DD/MM/YYYY · Singapore time.";
       const error=document.createElement("span"); error.className="date-field-error"; error.id=original.id+"-error"; error.hidden=true; error.setAttribute("aria-live","polite");
       let parseError="", rangeError="", touched=false;
       function validity() {
@@ -501,6 +501,32 @@ function validContactEmail(value) {
 
   const form = $("#enquiry-form");
   if (form) {
+
+    // Native details is the fallback; supporting browsers present the same notes in a dialog.
+    const termsPanel = $("#request-terms");
+    if (termsPanel && window.HTMLDialogElement?.prototype.showModal) {
+      const trigger = $("summary",termsPanel);
+      const termsDialog = document.createElement("dialog");
+      termsDialog.id = "request-terms-dialog"; termsDialog.className = "request-terms-dialog";
+      termsDialog.setAttribute("aria-labelledby","request-terms-title");
+      termsDialog.innerHTML = '<div class="request-terms-top"><h2 id="request-terms-title">Terms &amp; service</h2><button type="button" aria-label="Close terms">×</button></div>';
+      termsDialog.appendChild($("#request-terms-content"));
+      document.body.appendChild(termsDialog);
+      termsPanel.classList.add("is-dialog-trigger");
+      trigger.setAttribute("aria-haspopup","dialog");
+      trigger.setAttribute("aria-controls",termsDialog.id);
+      trigger.setAttribute("aria-expanded","false");
+      trigger.addEventListener("click",event=>{
+        event.preventDefault(); trigger.setAttribute("aria-expanded","true"); termsDialog.showModal();
+      });
+      $("button",termsDialog).addEventListener("click",()=>termsDialog.close());
+      termsDialog.addEventListener("close",()=>{ trigger.setAttribute("aria-expanded","false"); trigger.focus(); });
+    }
+    form.addEventListener("invalid",event=>{
+      const collapsed=event.target.closest("details");
+      if(collapsed) collapsed.open=true;
+    },true);
+
     let serviceParam = new URLSearchParams(window.location.search).get("service");
     if (["animation", "editing"].includes(serviceParam)) serviceParam = "motion";
     if (serviceParam === "both") serviceParam = "discuss";
@@ -548,7 +574,7 @@ function validContactEmail(value) {
       amount.step = robux ? "1" : "0.01";
       const type = $("#service").value;
       amount.min = robux ? (type === "motion" ? "6000" : ["roblox", "modelling"].includes(type) ? "25000" : "0") : "0";
-      $("#budget-hint").textContent = robux ? "Enter an amount, or leave blank to Discuss First. Whole numbers only. The Robux minimums below apply; the final price is confirmed after review." : "Enter an amount, or leave blank to Discuss First. Numbers with up to 2 decimal places; the final agreed price is confirmed in SGD.";
+      $("#budget-hint").textContent = robux ? "Whole numbers only. Leave blank to Discuss First." : "Leave blank to Discuss First. Final price is confirmed in SGD.";
     }
     function updateDeviceRequirements() {
       const irrelevant = $("#service").value === "motion";
