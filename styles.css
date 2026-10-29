@@ -529,11 +529,11 @@ html { scroll-padding-top: calc(var(--header-height) + 24px); }
   color: var(--ink); background: transparent;
 }
 .site-header::before {
-  content: ""; position: absolute; inset: 0 0 -36px; z-index: -1; pointer-events: none;
-  background: linear-gradient(to bottom,#f4f8fff2 0%,#f4f8ffcf 64%,#f4f8ff00 100%);
-  -webkit-backdrop-filter: blur(18px) saturate(135%); backdrop-filter: blur(18px) saturate(135%);
-  -webkit-mask-image: linear-gradient(to bottom,#000 0%,#000 62%,transparent 100%);
-  mask-image: linear-gradient(to bottom,#000 0%,#000 62%,transparent 100%);
+  content: ""; position: absolute; inset: 0 0 -96px; z-index: -1; pointer-events: none;
+  background: linear-gradient(to bottom,#f4f8ffe0 0%,#f4f8ffb8 25%,#f4f8ff73 48%,#f4f8ff26 72%,#f4f8ff00 100%);
+  -webkit-backdrop-filter: blur(22px) saturate(120%); backdrop-filter: blur(22px) saturate(120%);
+  -webkit-mask-image: linear-gradient(to bottom,#000 0%,#000e 24%,#0009 48%,#0003 76%,transparent 100%);
+  mask-image: linear-gradient(to bottom,#000 0%,#000e 24%,#0009 48%,#0003 76%,transparent 100%);
 }
 .site-frame > main { padding-top: var(--header-height); }
 body[data-page="home"] .site-frame > main { padding-top: 0; }
@@ -543,7 +543,7 @@ main > section.hero--cinematic {
 }
 .site-header.is-over-hero { color: white; }
 .site-header.is-over-hero::before {
-  background: linear-gradient(to bottom,#071630bd 0%,#07163070 64%,#07163000 100%);
+  background: linear-gradient(to bottom,#071630a6 0%,#07163080 25%,#0716304d 48%,#0716301a 72%,#07163000 100%);
 }
 .site-header.is-over-hero .site-nav > a { color: white; }
 .site-header.is-over-hero .site-nav > a:hover { color: #c4d8ff; }
