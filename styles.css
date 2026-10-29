@@ -716,3 +716,17 @@ body[data-page="contact"] .contact-grid { display: flex; flex-direction: column;
  .request-groups { gap: 22px; }
  .request-terms-dialog { padding: 18px; }
 }
+
+/* Square-edged interface; circular artwork and orbit graphics keep their geometry. */
+.site-header::after,
+.site-header .nav-contact,
+.site-header .motion-toggle,
+.site-header .menu-toggle,
+.site-header .site-nav.is-open,
+.button, .hero-play-icon,
+.field input:not([type="hidden"]), .field select, .field textarea,
+.date-input-control, .date-input-control input, .date-open-button,
+.date-dialog, .date-dialog .date-icon-button, .date-calendar button,
+.date-dialog-actions button,
+.request-terms > summary, .request-terms-dialog, .request-terms-top button,
+.local-presence { border-radius: 0; }
