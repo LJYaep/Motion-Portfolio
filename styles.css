@@ -785,3 +785,26 @@ body[data-page="contact"] .contact-grid { display: flex; flex-direction: column;
   .site-header::before { inset: 0; background: var(--paper); -webkit-mask-image: none; mask-image: none; }
   .site-header.is-over-hero::before { background: #0b1c40; }
 }
+
+/* Matching square rings for hovered, focused and current navigation items. */
+.site-header .site-nav { gap: 10px; }
+.site-header .site-nav > a:not(.button) {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 9px 14px; border: 1px solid transparent;
+  border-radius: 0; text-decoration: none; background: transparent;
+}
+.site-header .site-nav > a:not(.button)::before,
+.site-header .site-nav > a:not(.button)::after { content: none; display: none; }
+.site-header .site-nav > a:not(.button):is(:hover,:focus-visible,[aria-current="page"]) {
+  border-color: var(--blue); color: var(--blue); background: #0754f80a;
+}
+.site-header.is-over-hero .site-nav > a:not(.button):is(:hover,:focus-visible,[aria-current="page"]) {
+  border-color: #ffffffc4; color: white; background: #ffffff0f;
+}
+.motion-enabled .site-header .site-nav > a:not(.button) {
+  transition: border-color .2s ease,background-color .2s ease,color .2s ease;
+}
+@media (max-width:700px) {
+  .site-header .site-nav { gap: 6px; }
+  .site-header .site-nav > a:not(.button) { justify-content: flex-start; }
+}
