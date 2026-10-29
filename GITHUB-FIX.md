@@ -7,7 +7,7 @@ email app and does not need a Python server, SMTP password or API key.
 
 ## One-time owner activation
 
-1. Open https://denialaep.github.io/LJY/contact.html and submit a clearly labelled
+1. Open https://denialaep.github.io/LJY/projectrequest.html and submit a clearly labelled
    setup test with an email address you control. Complete FormSubmit's CAPTCHA.
 2. Check daniljy.aep@gmail.com, including Spam, for the FormSubmit activation
    email. Click its activation link. Only the mailbox owner can do this.

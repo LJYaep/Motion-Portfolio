@@ -3,7 +3,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY application.py enquiry_backend.py start_website_support.py ./
-COPY index.html work.html about.html services.html contact.html styles.css script.js public-config.js ./
+COPY index.html home.html work.html about.html services.html contact.html projectrequest.html styles.css script.js public-config.js ./
 COPY assets ./assets
 ENV ENQUIRY_DB_PATH=/data/enquiries.sqlite3
 EXPOSE 8080

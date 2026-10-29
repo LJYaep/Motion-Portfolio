@@ -3,7 +3,7 @@
 Status: integration prepared in the review branch, not enabled. No live keys have been supplied.
 
 1. In Cloudflare Turnstile, create a Managed widget for ljyaep.github.io. A widget can run on GitHub Pages without moving DNS to Cloudflare. Do not enter the repository path as a hostname.
-2. Send the public site key to the website maintainer to put in contact.html's data-turnstile-sitekey attribute. Never send the secret key in chat or commit it to GitHub.
+2. Send the public site key to the website maintainer to put in projectrequest.html's data-turnstile-sitekey attribute. Never send the secret key in chat or commit it to GitHub.
 3. In Google Apps Script Project Settings, set the private Script property TURNSTILE_SECRET_KEY. Optional TURNSTILE_HOSTNAMES is a comma-separated exact hostname allowlist, default ljyaep.github.io. The widget uses action project_request.
 4. Copy the review branch's latest Code.gs and deploy a New version of the same web app. Activate both frontend and backend together, then verify one legitimate submission and one missing-token rejection. With a secret configured, the backend rejects missing, expired, reused, wrong-hostname or wrong-action tokens before creating documents or sending mail.
 

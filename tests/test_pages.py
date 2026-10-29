@@ -34,7 +34,7 @@ class PagesTests(unittest.TestCase):
             pages.build(dest)
             config = (dest / "public-config.js").read_text()
             self.assertIn("https://script.google.com/macros/s/AKfycbwCfJTY6RK6Xvwf6XIm9XL1kLRB6gtlv19z3QVitkSTY-XmfnqTpYRwFZYZlXnfKvrgrQ/exec", config)
-            html = (dest / "contact.html").read_text()
+            html = (dest / "projectrequest.html").read_text()
             self.assertIn('action="https://script.google.com/macros/s/AKfycbwCfJTY6RK6Xvwf6XIm9XL1kLRB6gtlv19z3QVitkSTY-XmfnqTpYRwFZYZlXnfKvrgrQ/exec"', html)
             self.assertNotIn("formsubmit.co", html)
 
